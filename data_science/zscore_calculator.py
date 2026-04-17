@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print("Menguji Kalkulator SIDIAS\n")
     
     hasil_tes = hitung_status_stunting(
-        umur_bulan=12, 
+        umur_bulan=24, 
         tinggi_badan_cm=81.0, 
         jenis_kelamin="Laki-laki", 
         posisi_ukur="Telentang"
