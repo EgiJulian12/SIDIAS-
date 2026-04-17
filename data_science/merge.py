@@ -1,14 +1,10 @@
 import pandas as pd
-import os
-
-if os.path.basename(os.getcwd()) != 'data_science':
-    os.chdir(os.path.join(os.path.dirname(__file__)))
 
 # Load semua file 
-boys_0_2 = pd.read_excel('lhfa_boys_0-to-2-years_zscores.xlsx')
-boys_2_5 = pd.read_excel('lhfa_boys_2-to-5-years_zscores.xlsx')
-girls_0_2 = pd.read_excel('lhfa_girls_0-to-2-years_zscores.xlsx')
-girls_2_5 = pd.read_excel('lhfa_girls_2-to-5-years_zscores.xlsx')
+boys_0_2 = pd.read_excel('datasets/lhfa_boys_0-to-2-years_zscores.xlsx')
+boys_2_5 = pd.read_excel('datasets/lhfa_boys_2-to-5-years_zscores.xlsx')
+girls_0_2 = pd.read_excel('datasets/lhfa_girls_0-to-2-years_zscores.xlsx')
+girls_2_5 = pd.read_excel('datasets/lhfa_girls_2-to-5-years_zscores.xlsx')
 
 # Menambahkan kolom Jenis_Kelamin
 boys_0_2['Jenis_Kelamin'] = 'Laki-laki'
