@@ -4,12 +4,14 @@
 **ID Tim Capstone Project:** CC26-PSU020
 
 ## 👥 Tim Kami
-| **CFCC438D6Y1813** | Fairuz Istighfar | Full Stack | Aktif |
-| **CFCC482D6X1288** | Dela Deliansyah | Full Stack | Aktif |
-| **CDCC482D6Y0599** | Egi Julian | Data Science | Aktif |
-| **CDCC319D6X1000** | Dini Arya Putri | Data Science | Aktif |
-| **CACC482D6Y2469** | Mohammad Bisri Musthafa | AI Engineer | Aktif |
-| **CACC404D6X0172** | Elisabeth Margaretta | AI Engineer | Aktif |
+| ID Peserta | Nama | Role | Status |
+|---|---|---|---|
+| CFCC438D6Y1813 | Fairuz Istighfar | Full Stack | Aktif |
+| CFCC482D6X1288 | Dela Deliansyah | Full Stack | Aktif |
+| CDCC482D6Y0599 | Egi Julian | Data Science | Aktif |
+| CDCC319D6X1000 | Dini Arya Putri | Data Science | Aktif |
+| CACC482D6Y2469 | Mohammad Bisri Musthafa | AI Engineer | Aktif |
+| CACC404D6X0172 | Elisabeth Margaretta | AI Engineer | Aktif |
 
 ---
 
