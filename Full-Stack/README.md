@@ -2,7 +2,7 @@
 
 **Tanggal:** 27 April 2026
 
-## Status Saat Ini
+## Status
 - Melakukan setup awal proyek React JS menggunakan vite di dalam folder Front-End.
 - Untuk menguji file untuk keperluan *development* React JS lakukan (npm run start).
 
