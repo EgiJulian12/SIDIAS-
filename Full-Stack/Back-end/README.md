@@ -1,25 +1,51 @@
 # Backend Sistem Deteksi Stunting API
 
-Backend starter project berbasis Node.js dan Express.js untuk **SIDIAS**. Project ini dibangun dirancang khusus untuk memproses parameter pertumbuhan anak (usia, berat badan, dan tinggi badan) sebagai fondasi algoritma indikator stunting. Seluruh endpoint juga telah dilengkapi dengan *automated testing* (TDD).
+Backend API untuk sistem deteksi stunting SIDIAS menggunakan Node.js dan Express.js.
 
-## Log Aktivitas & Dokumentasi
+Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan untuk pengelolaan data balita serta pondasi sistem analisis indikator stunting berdasarkan data pertumbuhan anak seperti usia, berat badan, dan tinggi badan.
 
-### [7 Mei 2026] - Setup Awal & Konfigurasi TDD
-- **Inisialisasi Project**: Setup Node.js menggunakan sistem modul modern (`ES Modules`).
-- **Express Server**: Pembuatan arsitektur server MVC dasar (Routes, Controllers, Middleware, Config).
-- **RESTful API**: Implementasi operasi CRUD untuk entitas `Balita` menggunakan *mock data* (memory array sementara).
-  - `GET /api/balita` (Mendapatkan semua data)
-  - `GET /api/balita/:id` (Mendapatkan data spesifik)
-  - `POST /api/balita` (Menambahkan data baru)
-  - `PUT /api/balita/:id` (Mengubah data)
-  - `DELETE /api/balita/:id` (Menghapus data)
-- **Test-Driven Development (TDD)**: Konfigurasi alat pengujian otomatis menggunakan **Jest** dan **Supertest**. Menyusun 9 skenario pengujian dengan hasil kelulusan 100% (*Green*).
-- **Refactoring Server**: Pemisahan instance Express ke `app.js` dan listening server ke `server.js` untuk mencegah bentrok port saat eksekusi *automated testing*.
+## Fitur Saat Ini
 
-dan nanti diupdate lagi
+- REST API CRUD data balita
+- Validasi input data
+- Perhitungan umur otomatis dari tanggal lahir
+- Struktur project Express.js
+- Automated testing menggunakan Jest dan Supertest
+- Dokumentasi testing menggunakan Postman Collection
+
 ---
 
-## Panduan Penggunaan
+## Development Log
+
+### 7 Mei 2026
+- Setup awal project Node.js dengan ES Modules
+- Membuat struktur backend Express.js
+- Implementasi CRUD data balita menggunakan mock data sementara
+- Setup testing menggunakan Jest dan Supertest
+- Memisahkan `app.js` dan `server.js` agar testing tidak bentrok dengan server
+
+### 9 Mei 2026
+- Menambahkan validasi input pada endpoint POST dan PUT
+- Menambahkan perhitungan otomatis umur balita berdasarkan tanggal lahir
+- Penyesuaian controller dan routing
+- Menambahkan Postman Collection untuk testing manual API
+- implementasi in memory testing menggunakan Jest dan Supertest
+- Setup database dan controller untuk menyimpan analisis data stunting dan riwayat pengukuran
+
+---
+
+## Tools
+
+- Node.js
+- Express.js
+- Jest
+- Supertest
+- Nodemon
+- Postman
+
+---
+
+## Cara Menjalankan Project
 
 **1. Install Dependencies**
 ```bash
