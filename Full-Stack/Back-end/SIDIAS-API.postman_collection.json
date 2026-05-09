@@ -1,0 +1,262 @@
+{
+  "info": {
+    "_postman_id": "b3e0c7f2-1a4b-4c5d-9e6f-7a8b9c0d1e2f",
+    "name": "SIDIAS API",
+    "description": "Koleksi untuk menguji backend SIDIAS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Data Balita",
+      "item": [
+        {
+          "name": "Get All Data Balita",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/data-balita",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "data-balita"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Data Balita By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/data-balita/ID_BALITA_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "data-balita",
+                "ID_BALITA_DISINI"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Data Balita",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nama\": \"Budi Santoso\",\n    \"jenis_kelamin\": \"L\",\n    \"tanggal_lahir\": \"2023-01-15\",\n    \"berat_badan\": 10.5,\n    \"tinggi_badan\": 78.0,\n    \"created_by\": \"admin_user\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/data-balita",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "data-balita"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Data Balita",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"berat_badan\": 11.2,\n    \"tinggi_badan\": 80.5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/data-balita/ID_BALITA_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "data-balita",
+                "ID_BALITA_DISINI"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Data Balita",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/data-balita/ID_BALITA_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "data-balita",
+                "ID_BALITA_DISINI"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analisis",
+      "item": [
+        {
+          "name": "Get All Analisis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analisis",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Analisis By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analisis/ID_ANALISIS_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis",
+                "ID_ANALISIS_DISINI"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Analisis By Data Balita ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analisis/data-balita/ID_BALITA_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis",
+                "data-balita",
+                "ID_BALITA_DISINI"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Analisis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data_id\": \"ID_BALITA_DISINI\",\n    \"status_stunting\": \"Normal\",\n    \"tingkat_risiko\": \"Rendah\",\n    \"indikator\": \"Berat dan Tinggi ideal\",\n    \"z_score\": 0.25,\n    \"rekomendasi\": \"Lanjutkan pemberian nutrisi seimbang\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/analisis",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Analisis",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status_stunting\": \"Beresiko Stunting\",\n    \"tingkat_risiko\": \"Sedang\",\n    \"z_score\": -2.1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/analisis/ID_ANALISIS_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis",
+                "ID_ANALISIS_DISINI"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Analisis",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analisis/ID_ANALISIS_DISINI",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analisis",
+                "ID_ANALISIS_DISINI"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
