@@ -1,3 +1,4 @@
+
 albumentations==1.4.18
 matplotlib==3.10.9
 numpy==2.4.4
@@ -13,7 +14,6 @@ tqdm==4.67.3
 opencv-python==4.13.0.92
 opencv-python-headless==4.10.0.84
 
-
 agix==1.9.0
 featq==1.0.0
 pdc-dp-means==0.0.8
@@ -26,10 +26,10 @@ scikit-lexicographical-trees==0.0.5
 sklearn==0.0.post12
 the1owl==0.0.8
 theBrainFuck==0.0.3
-# WARNING(pigar): the following duplicate requirements are for the import name: statsmodels
+
 statsmodels==0.14.6
 statsmodels-dq==3.0
-# WARNING(pigar): the following duplicate requirements are for the import name: tensorflow
+
 aicoe-tensorflow==0.0.0
 intel-tensorflow==2.14.0
 intel-tensorflow-avx512==2.14.0
