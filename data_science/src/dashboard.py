@@ -17,7 +17,7 @@ st.set_page_config(
 
 # Tema Palet Warna Modern (Flat UI)
 C_RED     = '#E74C3C'
-C_GREEN   = '#2ECC71'
+C_GREEN   = "#22D66D"
 C_AMBER   = '#F39C12'
 C_BLUE    = '#3498DB'
 C_NAVY    = '#2C3E50'
