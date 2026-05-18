@@ -127,7 +127,7 @@ with st.sidebar:
 # ==========================================
 if halaman == "🏠 Ringkasan Eksekutif":
     st.markdown("<h3 style='color: #7F8C8D; margin-bottom:0px;'>STRATEGIC REPORT</h3>", unsafe_allow_html=True)
-    st.markdown("<h1 style='color: #2C3E50; margin-top:0px;'>📈 Ringkasan Eksekutif — Panel Utama SIDIAS</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #3498DB; margin-top:0px;'>📈 Ringkasan Eksekutif — Panel Utama SIDIAS</h1>", unsafe_allow_html=True)
     st.markdown("Konsolidasian data indikator makro malnutrisi balita (0-60 bulan) terintegrasi untuk mendukung keputusan taktis manajemen medis.")
     st.divider()
 
@@ -193,7 +193,7 @@ if halaman == "🏠 Ringkasan Eksekutif":
             df_filtered, x='usia_bulan', y='tinggi_badan', 
             color='status_tb_u',
             symbol='jenis_kelamin',
-            color_discrete_map={'Stunting': C_RED, 'Normal': C_GREEN},
+            color_discrete_map={'Stunting': C_RED, 'Tidak Stunting': C_GREEN},
             labels={'usia_bulan': 'Usia Anak (Bulan)', 'tinggi_badan': 'Tinggi Badan (cm)', 'status_tb_u': 'Status Gizi'},
             hover_data=['berat_badan', 'zscore_tb_u']
         )
@@ -205,7 +205,7 @@ if halaman == "🏠 Ringkasan Eksekutif":
         status_counts = df_filtered['status_tb_u'].value_counts().reset_index()
         status_counts.columns = ['Status', 'Jumlah']
         fig_pie = px.pie(status_counts, values='Jumlah', names='Status', hole=0.5,
-                         color='Status', color_discrete_map={'Stunting': C_RED, 'Normal': C_GREEN})
+                         color='Status', color_discrete_map={'Stunting': C_RED, 'Tidak Stunting': C_GREEN})
         fig_pie.update_layout(margin=dict(t=20, b=10, l=10, r=10), height=350, legend=dict(orientation="v", x=0.8, y=0.5))
         st.plotly_chart(fig_pie, use_container_width=True)
 
