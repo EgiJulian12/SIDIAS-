@@ -1,26 +1,41 @@
 import request from 'supertest';
 import app from '../app.js';
-import { dataBalita } from '../config/db.js';
+import { pool } from '../config/db.js';
+import fs from 'fs';
+import path from 'path';
 
-describe('Data Balita API Endpoints', () => {
-  const initialData = [
-    {
-      id: 'uuid-1',
-      nama: 'Budi',
-      jenis_kelamin: 'L',
-      tanggal_lahir: '2023-01-01',
-      berat_badan: 10.5,
-      tinggi_badan: 80,
-      umur_bulan: 16,
-      foto_url: 'http://example.com/budi.jpg',
-      created_by: 'system',
-      created_at: '2024-05-01T00:00:00.000Z'
+describe('Data Balita API Endpoints (Integration Testing)', () => {
+  let createdBalitaId;
+
+  beforeAll(async () => {
+    // Pastikan schema tabel ada. Jika tidak, akan dibuat
+    try {
+      const schemaPath = path.resolve(process.cwd(), 'schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+      await pool.query(schemaSql);
+    } catch (err) {
+      console.log('Error setting up schema in test:', err.message);
+      // Abaikan jika tabel sudah ada
+      // Untuk keamanan, biarkan jika gagal
     }
-  ];
+  });
 
-  beforeEach(() => {
-    dataBalita.length = 0;
-    initialData.forEach(item => dataBalita.push({ ...item }));
+  beforeEach(async () => {
+    // Bersihkan tabel data_balita sebelum tiap test
+    await pool.query('TRUNCATE TABLE analisis CASCADE'); // Bersihkan relasi terlebih dahulu
+    await pool.query('TRUNCATE TABLE data_balita CASCADE');
+    
+    // Masukkan data awal (seed)
+    const res = await pool.query(`
+      INSERT INTO data_balita (nama, jenis_kelamin, tanggal_lahir, berat_badan, tinggi_badan, umur_bulan, foto_url)
+      VALUES ('Budi', 'L', '2023-01-01', 10.5, 80, 16, 'http://example.com/budi.jpg')
+      RETURNING id
+    `);
+    createdBalitaId = res.rows[0].id;
+  });
+
+  afterAll(async () => {
+    await pool.end(); // Tutup koneksi DB
   });
 
   describe('GET /api/data-balita', () => {
@@ -29,19 +44,22 @@ describe('Data Balita API Endpoints', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.count).toBe(1);
+      expect(res.body.data[0].nama).toBe('Budi');
     });
   });
 
   describe('GET /api/data-balita/:id', () => {
     it('should return a specific data balita by ID', async () => {
-      const res = await request(app).get('/api/data-balita/uuid-1');
+      const res = await request(app).get(`/api/data-balita/${createdBalitaId}`);
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.nama).toBe('Budi');
     });
 
     it('should return 404 if data not found', async () => {
-      const res = await request(app).get('/api/data-balita/not-found-id');
+      // Hasilkan UUID acak yang tidak ada di database
+      const randomUUID = '123e4567-e89b-12d3-a456-426614174000';
+      const res = await request(app).get(`/api/data-balita/${randomUUID}`);
       expect(res.statusCode).toBe(404);
       expect(res.body.success).toBe(false);
     });
@@ -71,7 +89,7 @@ describe('Data Balita API Endpoints', () => {
     it('should return 400 if required fields are missing', async () => {
       const res = await request(app)
         .post('/api/data-balita')
-        .send({ nama: 'Siti' }); // Missing jenis_kelamin, tanggal_lahir
+        .send({ nama: 'Siti' }); // Kekurangan jenis_kelamin, tanggal_lahir
 
       expect(res.statusCode).toBe(400);
     });
@@ -92,19 +110,23 @@ describe('Data Balita API Endpoints', () => {
   describe('PUT /api/data-balita/:id', () => {
     it('should update an existing data balita', async () => {
       const res = await request(app)
-        .put('/api/data-balita/uuid-1')
+        .put(`/api/data-balita/${createdBalitaId}`)
         .send({ berat_badan: 11.0 });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.berat_badan).toBe(11.0);
+      // Di PG, tipe desimal dikembalikan sebagai string kecuali di-cast
+      expect(parseFloat(res.body.data.berat_badan)).toBe(11.0);
     });
   });
 
   describe('DELETE /api/data-balita/:id', () => {
     it('should delete a data balita', async () => {
-      const res = await request(app).delete('/api/data-balita/uuid-1');
+      const res = await request(app).delete(`/api/data-balita/${createdBalitaId}`);
       expect(res.statusCode).toBe(200);
-      expect(dataBalita.length).toBe(0);
+      
+      // Verifikasi penghapusan
+      const checkRes = await pool.query('SELECT * FROM data_balita WHERE id = $1', [createdBalitaId]);
+      expect(checkRes.rowCount).toBe(0);
     });
   });
 });

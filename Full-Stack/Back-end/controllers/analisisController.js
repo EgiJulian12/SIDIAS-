@@ -1,158 +1,193 @@
-import { analisisData, dataBalita } from '../config/db.js';
-import crypto from 'crypto';
+import { pool } from '../config/db.js';
 
-// GET /api/analisis
-export const getAllAnalisis = (req, res) => {
-  res.status(200).json({
-    success: true,
-    count: analisisData.length,
-    data: analisisData
-  });
+// Mengambil semua data analisis
+export const getAllAnalisis = async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT * FROM analisis ORDER BY analyzed_at DESC');
+    res.status(200).json({
+      success: true,
+      count: result.rowCount,
+      data: result.rows
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-// GET /api/analisis/:id
-export const getAnalisisById = (req, res) => {
-  const analisis = analisisData.find(a => a.id === req.params.id);
+// Mengambil data analisis berdasarkan ID
+export const getAnalisisById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
 
-  if (!analisis) {
-    return res.status(404).json({
-      success: false,
-      message: 'Data analisis tidak ditemukan'
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data analisis tidak ditemukan'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result.rows[0]
     });
+  } catch (error) {
+    next(error);
   }
-
-  res.status(200).json({
-    success: true,
-    data: analisis
-  });
 };
 
-// GET /api/analisis/data-balita/:data_id
-export const getAnalisisByDataId = (req, res) => {
-  const analisis = analisisData.find(a => a.data_id === req.params.data_id);
+// Mengambil analisis berdasarkan ID balita
+export const getAnalisisByDataId = async (req, res, next) => {
+  try {
+    const { data_id } = req.params;
+    const result = await pool.query('SELECT * FROM analisis WHERE data_id = $1 ORDER BY analyzed_at DESC', [data_id]);
 
-  if (!analisis) {
-    return res.status(404).json({
-      success: false,
-      message: 'Data analisis untuk balita ini tidak ditemukan'
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data analisis untuk balita ini tidak ditemukan'
+      });
+    }
+
+    // Biasanya kita mengembalikan data yang paling baru
+    // Implementasi sebelumnya menggunakan .find() yang mengembalikan kecocokan pertama.
+    res.status(200).json({
+      success: true,
+      data: result.rows[0]
     });
+  } catch (error) {
+    next(error);
   }
-
-  res.status(200).json({
-    success: true,
-    data: analisis
-  });
 };
 
-// POST /api/analisis
-export const createAnalisis = (req, res) => {
-  const { 
-    data_id, 
-    status_stunting, 
-    tingkat_risiko, 
-    indikator, 
-    z_score, 
-    rekomendasi 
-  } = req.body;
+// Menambahkan data analisis baru
+export const createAnalisis = async (req, res, next) => {
+  try {
+    const { 
+      data_id, 
+      status_stunting, 
+      tingkat_risiko, 
+      indikator, 
+      z_score, 
+      rekomendasi 
+    } = req.body;
 
-  if (!data_id || !status_stunting || z_score === undefined) {
-    return res.status(400).json({
-      success: false,
-      message: 'Field data_id, status_stunting, dan z_score wajib diisi'
+    if (!data_id || !status_stunting || z_score === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Field data_id, status_stunting, dan z_score wajib diisi'
+      });
+    }
+
+    // Memastikan data balita ada
+    const balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1', [data_id]);
+    if (balitaExists.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data balita dengan data_id tersebut tidak ditemukan'
+      });
+    }
+
+    // Memastikan analisis untuk balita belum ada (jika relasinya 1-to-1)
+    const existingAnalisis = await pool.query('SELECT id FROM analisis WHERE data_id = $1', [data_id]);
+    if (existingAnalisis.rowCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Analisis untuk data balita ini sudah ada'
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO analisis (data_id, status_stunting, tingkat_risiko, indikator, z_score, rekomendasi) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        data_id, 
+        status_stunting, 
+        tingkat_risiko || null, 
+        indikator || null, 
+        z_score, 
+        rekomendasi || null
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Data analisis berhasil ditambahkan',
+      data: result.rows[0]
     });
+  } catch (error) {
+    next(error);
   }
-
-  // Validate data_id exists in dataBalita
-  const balitaExists = dataBalita.find(b => b.id === data_id);
-  if (!balitaExists) {
-    return res.status(404).json({
-      success: false,
-      message: 'Data balita dengan data_id tersebut tidak ditemukan'
-    });
-  }
-
-  // Check unique data_id constraint
-  const existingAnalisis = analisisData.find(a => a.data_id === data_id);
-  if (existingAnalisis) {
-    return res.status(400).json({
-      success: false,
-      message: 'Analisis untuk data balita ini sudah ada'
-    });
-  }
-
-  const newAnalisis = {
-    id: crypto.randomUUID(),
-    data_id,
-    status_stunting,
-    tingkat_risiko: tingkat_risiko || null,
-    indikator: indikator || null,
-    z_score,
-    rekomendasi: rekomendasi || null,
-    created_at: new Date().toISOString()
-  };
-
-  analisisData.push(newAnalisis);
-
-  res.status(201).json({
-    success: true,
-    message: 'Data analisis berhasil ditambahkan',
-    data: newAnalisis
-  });
 };
 
-// PUT /api/analisis/:id
-export const updateAnalisis = (req, res) => {
-  const analisisIndex = analisisData.findIndex(a => a.id === req.params.id);
+// Memperbarui data analisis berdasarkan ID
+export const updateAnalisis = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { 
+      status_stunting, 
+      tingkat_risiko, 
+      indikator, 
+      z_score, 
+      rekomendasi 
+    } = req.body;
 
-  if (analisisIndex === -1) {
-    return res.status(404).json({
-      success: false,
-      message: 'Data analisis tidak ditemukan'
+    const currentAnalisis = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+
+    if (currentAnalisis.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data analisis tidak ditemukan'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE analisis 
+       SET status_stunting = COALESCE($1, status_stunting),
+           tingkat_risiko = COALESCE($2, tingkat_risiko),
+           indikator = COALESCE($3, indikator),
+           z_score = COALESCE($4, z_score),
+           rekomendasi = COALESCE($5, rekomendasi)
+       WHERE id = $6 RETURNING *`,
+      [
+        status_stunting, 
+        tingkat_risiko, 
+        indikator, 
+        z_score, 
+        rekomendasi, 
+        id
+      ]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Data analisis berhasil diperbarui',
+      data: result.rows[0]
     });
+  } catch (error) {
+    next(error);
   }
-
-  const { 
-    status_stunting, 
-    tingkat_risiko, 
-    indikator, 
-    z_score, 
-    rekomendasi 
-  } = req.body;
-
-  const existingData = analisisData[analisisIndex];
-
-  analisisData[analisisIndex] = {
-    ...existingData,
-    status_stunting: status_stunting || existingData.status_stunting,
-    tingkat_risiko: tingkat_risiko !== undefined ? tingkat_risiko : existingData.tingkat_risiko,
-    indikator: indikator !== undefined ? indikator : existingData.indikator,
-    z_score: z_score !== undefined ? z_score : existingData.z_score,
-    rekomendasi: rekomendasi !== undefined ? rekomendasi : existingData.rekomendasi
-  };
-
-  res.status(200).json({
-    success: true,
-    message: 'Data analisis berhasil diperbarui',
-    data: analisisData[analisisIndex]
-  });
 };
 
-// DELETE /api/analisis/:id
-export const deleteAnalisis = (req, res) => {
-  const analisisIndex = analisisData.findIndex(a => a.id === req.params.id);
+// Menghapus data analisis berdasarkan ID
+export const deleteAnalisis = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM analisis WHERE id = $1 RETURNING *', [id]);
 
-  if (analisisIndex === -1) {
-    return res.status(404).json({
-      success: false,
-      message: 'Data analisis tidak ditemukan'
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data analisis tidak ditemukan'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Data analisis berhasil dihapus',
+      data: result.rows[0]
     });
+  } catch (error) {
+    next(error);
   }
-
-  const deletedData = analisisData.splice(analisisIndex, 1);
-
-  res.status(200).json({
-    success: true,
-    message: 'Data analisis berhasil dihapus',
-    data: deletedData[0]
-  });
 };

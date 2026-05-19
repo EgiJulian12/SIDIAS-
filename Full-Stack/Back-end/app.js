@@ -6,12 +6,16 @@ import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
 
+// Middleware untuk mem-parsing body JSON
 app.use(express.json());
+// Middleware untuk mencatat log request
 app.use(logger);
 
+// Mendaftarkan rute (routing) API
 app.use('/api/data-balita', dataBalitaRoutes);
 app.use('/api/analisis', analisisRoutes);
 
+// Middleware untuk menangani error secara terpusat
 app.use(errorHandler);
 
 export default app;

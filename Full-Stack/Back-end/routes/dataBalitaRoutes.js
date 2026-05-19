@@ -9,10 +9,12 @@ import {
 
 const router = express.Router();
 
+// Rute untuk mengambil semua data dan menambah data balita
 router.route('/')
   .get(getAllDataBalita)
   .post(createDataBalita);
 
+// Rute untuk mengambil, mengubah, dan menghapus data balita berdasarkan ID
 router.route('/:id')
   .get(getDataBalitaById)
   .put(updateDataBalita)

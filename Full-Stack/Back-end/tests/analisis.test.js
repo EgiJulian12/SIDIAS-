@@ -1,123 +1,143 @@
 import request from 'supertest';
 import app from '../app.js';
-import { analisisData, dataBalita } from '../config/db.js';
+import { pool } from '../config/db.js';
 
-describe('Analisis API Endpoints', () => {
-  const mockBalita = {
-    id: 'data-uuid-1',
-    nama: 'Budi',
-    jenis_kelamin: 'L',
-    tanggal_lahir: '2023-01-01'
-  };
+describe('Analisis API Endpoints (Integration Testing)', () => {
+  let createdBalitaId;
+  let createdAnalisisId;
 
-  const initialAnalisis = {
-    id: 'analisis-uuid-1',
-    data_id: 'data-uuid-1',
-    status_stunting: 'Normal',
-    tingkat_risiko: 'Rendah',
-    indikator: 'Berat badan dan tinggi sesuai',
-    z_score: 0.5,
-    rekomendasi: 'Lanjutkan nutrisi seimbang',
-    created_at: '2024-05-01T00:00:00.000Z'
-  };
+  beforeAll(async () => {
+    // Skema diasumsikan sudah ada atau ditangani oleh tes pertama
+  });
 
-  beforeEach(() => {
-    dataBalita.length = 0;
-    dataBalita.push({ ...mockBalita });
+  beforeEach(async () => {
+    await pool.query('TRUNCATE TABLE analisis CASCADE');
+    await pool.query('TRUNCATE TABLE data_balita CASCADE');
 
-    analisisData.length = 0;
-    analisisData.push({ ...initialAnalisis });
+    // Buat balita sementara untuk foreign key
+    const balitaRes = await pool.query(`
+      INSERT INTO data_balita (nama, jenis_kelamin, tanggal_lahir, berat_badan, tinggi_badan, umur_bulan)
+      VALUES ('Test Balita', 'L', '2023-01-01', 10.5, 80, 16)
+      RETURNING id
+    `);
+    createdBalitaId = balitaRes.rows[0].id;
+
+    const analisisRes = await pool.query(`
+      INSERT INTO analisis (data_id, status_stunting, tingkat_risiko, indikator, z_score, rekomendasi)
+      VALUES ($1, 'Stunting', 'Tinggi', 'TB/U', -2.5, 'Segera rujuk ke faskes')
+      RETURNING id
+    `, [createdBalitaId]);
+    createdAnalisisId = analisisRes.rows[0].id;
+  });
+
+  afterAll(async () => {
+    // Karena pool dibagikan, kita tutup agar proses jest bisa selesai
+    await pool.end();
   });
 
   describe('GET /api/analisis', () => {
-    it('should return all analisis', async () => {
+    it('should return all data analisis', async () => {
       const res = await request(app).get('/api/analisis');
       expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
       expect(res.body.count).toBe(1);
     });
   });
 
   describe('GET /api/analisis/:id', () => {
-    it('should return specific analisis', async () => {
-      const res = await request(app).get('/api/analisis/analisis-uuid-1');
+    it('should return a specific data analisis by ID', async () => {
+      const res = await request(app).get(`/api/analisis/${createdAnalisisId}`);
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.status_stunting).toBe('Normal');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status_stunting).toBe('Stunting');
+    });
+
+    it('should return 404 if data not found', async () => {
+      const randomUUID = '123e4567-e89b-12d3-a456-426614174001';
+      const res = await request(app).get(`/api/analisis/${randomUUID}`);
+      expect(res.statusCode).toBe(404);
+      expect(res.body.success).toBe(false);
     });
   });
 
   describe('GET /api/analisis/data-balita/:data_id', () => {
-    it('should return analisis by data_id', async () => {
-      const res = await request(app).get('/api/analisis/data-balita/data-uuid-1');
+    it('should return analisis for a specific balita', async () => {
+      const res = await request(app).get(`/api/analisis/data-balita/${createdBalitaId}`);
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.id).toBe('analisis-uuid-1');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.data_id).toBe(createdBalitaId);
     });
   });
 
   describe('POST /api/analisis', () => {
-    it('should create new analisis', async () => {
-      // Add a new balita first so we can analyze it
-      dataBalita.push({
-        id: 'data-uuid-2',
-        nama: 'Siti',
-        jenis_kelamin: 'P',
-        tanggal_lahir: '2023-05-01'
-      });
+    it('should create a new data analisis', async () => {
+      // Buat balita lain terlebih dahulu
+      const anotherBalita = await pool.query(`
+        INSERT INTO data_balita (nama, jenis_kelamin, tanggal_lahir, berat_badan, tinggi_badan, umur_bulan)
+        VALUES ('Another Balita', 'P', '2023-01-01', 9.5, 75, 16)
+        RETURNING id
+      `);
+      
+      const newDataId = anotherBalita.rows[0].id;
 
       const newAnalisis = {
-        data_id: 'data-uuid-2',
-        status_stunting: 'Stunting',
-        z_score: -2.5
+        data_id: newDataId,
+        status_stunting: 'Normal',
+        tingkat_risiko: 'Rendah',
+        indikator: 'TB/U',
+        z_score: 0.5,
+        rekomendasi: 'Pertahankan gizi seimbang'
       };
-
+      
       const res = await request(app)
         .post('/api/analisis')
         .send(newAnalisis);
 
       expect(res.statusCode).toBe(201);
-      expect(res.body.data.data_id).toBe('data-uuid-2');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status_stunting).toBe('Normal');
     });
 
-    it('should return 404 if data_id does not exist', async () => {
+    it('should return 400 if required fields are missing', async () => {
+      const res = await request(app)
+        .post('/api/analisis')
+        .send({ data_id: createdBalitaId }); 
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 404 if data_id does not exist in data_balita', async () => {
+      const randomUUID = '123e4567-e89b-12d3-a456-426614174002';
       const res = await request(app)
         .post('/api/analisis')
         .send({
-          data_id: 'non-existent',
+          data_id: randomUUID,
           status_stunting: 'Normal',
           z_score: 0
         });
 
       expect(res.statusCode).toBe(404);
     });
-
-    it('should return 400 if analysis already exists for data_id', async () => {
-      const res = await request(app)
-        .post('/api/analisis')
-        .send({
-          data_id: 'data-uuid-1',
-          status_stunting: 'Normal',
-          z_score: 0
-        });
-
-      expect(res.statusCode).toBe(400);
-    });
   });
 
   describe('PUT /api/analisis/:id', () => {
-    it('should update existing analisis', async () => {
+    it('should update an existing data analisis', async () => {
       const res = await request(app)
-        .put('/api/analisis/analisis-uuid-1')
-        .send({ z_score: 1.0 });
+        .put(`/api/analisis/${createdAnalisisId}`)
+        .send({ status_stunting: 'Normal' });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.z_score).toBe(1.0);
+      expect(res.body.data.status_stunting).toBe('Normal');
     });
   });
 
   describe('DELETE /api/analisis/:id', () => {
-    it('should delete analisis', async () => {
-      const res = await request(app).delete('/api/analisis/analisis-uuid-1');
+    it('should delete a data analisis', async () => {
+      const res = await request(app).delete(`/api/analisis/${createdAnalisisId}`);
       expect(res.statusCode).toBe(200);
-      expect(analisisData.length).toBe(0);
+      
+      const checkRes = await pool.query('SELECT * FROM analisis WHERE id = $1', [createdAnalisisId]);
+      expect(checkRes.rowCount).toBe(0);
     });
   });
 });

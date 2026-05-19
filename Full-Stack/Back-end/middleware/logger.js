@@ -1,3 +1,4 @@
+// Middleware untuk mencatat log setiap request masuk
 const logger = (req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.protocol}://${req.get('host')}${req.originalUrl}`);
