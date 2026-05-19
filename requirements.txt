@@ -1,0 +1,13 @@
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+scikit-learn
+tqdm
+albumentations
+opencv-python
+scipy
+statsmodels
+roboflow
