@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 
 class StuntingCalculator:
     def __init__(self, master_data_path):
@@ -58,14 +59,30 @@ class StuntingCalculator:
         return {"z_score": z_tbu, "status": status}
 
 # --- PENGGUNAAN ---
-# Inisialisasi kalkulator dengan data master
-calc = StuntingCalculator("data_science/data/processed/who_reference_master.csv")
-
-# Contoh input aplikasi Anda
-calc.detect_stunting(
-    nama="Budi", 
-    jenis_kelamin="Laki-laki", 
-    usia_bulan=24.0, 
-    tinggi_cm=80.0, 
-    berat_kg=12.0
-)
+if __name__ == "__main__":
+    
+    # 1. Deteksi posisi folder 'src' saat ini secara absolut
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 2. Bangun jalur ke file master WHO secara presisi:
+    # Mundur 1 langkah dari 'src' ke 'data_science', lalu masuk ke folder 'data/raw/who_source/...'
+    path_uji_coba = os.path.abspath(os.path.join(current_dir, '..', 'data', 'raw', 'who_source', 'who_reference_master.csv'))
+    
+    try:
+        calc = StuntingCalculator(path_uji_coba)
+        print("✅ [Uji Mandiri] Objek StuntingCalculator Berhasil Diinisialisasi!")
+        print(f"📂 Menggunakan File Master WHO: {path_uji_coba}")
+        
+        print("\n--- [Uji Mandiri] SIMULASI KASUS BALITA ---")
+        calc.detect_stunting(
+            nama="Budi", 
+            jenis_kelamin="Laki-laki", 
+            usia_bulan=12, 
+            tinggi_cm=68.5, 
+            berat_kg=8.5
+        )
+    except FileNotFoundError:
+        print(f"❌ [Uji Mandiri] Gagal menemukan file master WHO di jalur absolut: \n   {path_uji_coba}")
+        print("   Silakan periksa kembali apakah letak file 'who_reference_master.csv' sudah sesuai.")
+    except Exception as e:
+        print(f"❌ [Uji Mandiri] Terjadi kendala: {e}")
