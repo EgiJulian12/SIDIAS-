@@ -12,3 +12,4 @@ scipy
 statsmodels
 roboflow
 tensorflow
+nbconvert
