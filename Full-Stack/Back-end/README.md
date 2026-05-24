@@ -43,6 +43,15 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - Memperbarui test suite (TDD) menjadi Integration Testing yang langsung berinteraksi dengan PostgreSQL
 - Merapikan komentar di backend agar lebih jelas
 
+### 24 Mei 2026
+
+- Mengintegrasikan Frontend (React/Vite) dengan Backend (Node.js/Express)
+- Menambahkan middleware `cors` pada Backend agar dapat menerima request HTTP dari origin Frontend
+- Membuat konfigurasi `.env` pada Frontend untuk menyimpan URL API Backend
+- Membuat API Service `dataBalitaService.js` untuk menangani *POST request*
+- Merombak halaman `Diagnosis.jsx` menjadi *Form Input Data Balita* yang estetik menggunakan Tailwind CSS
+- Menguji alur *End-to-End* (E2E) untuk memastikan data dari form UI Frontend berhasil tersimpan ke dalam database PostgreSQL
+
 ---
 
 ## Tools
@@ -55,6 +64,7 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - Postman
 - PostgreSQL
 - pg (node-postgres)
+- CORS
 
 ---
 
