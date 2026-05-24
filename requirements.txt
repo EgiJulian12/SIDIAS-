@@ -13,3 +13,5 @@ statsmodels
 roboflow
 tensorflow
 nbconvert
+sns
+imblearn
