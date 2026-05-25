@@ -99,9 +99,3 @@ Dokumentasi metadata, anotasi kelas, dan skema *data splitting* untuk berkas gam
 | **Training Set** | 80% | *1.695* | Data utama yang digunakan arsitektur CNN untuk ekstraksi fitur visual dan pembaruan bobot (*weights*) model. |
 | **Validation Set**| 10% | *334* | Data independen yang dievaluasi pada setiap akhir *epoch* untuk memantau proses training dan mencegah *overfitting*. |
 | **Testing Set** | 10% | *170* | Data uji final yang belum pernah dilihat oleh model untuk mengukur metrik akurasi (*evaluation metrics*) akhir. |
-
-#### C. Representasi Target & Label Kelas (*Class Labels Mapping*)
-| Nama Label | Nilai *Encoding* | Deskripsi Visual & Klinis Citra |
-| :--- | :--- | :--- |
-| **`Healthy`** | `0` | Foto/citra representasi balita dengan indikator pertumbuhan fisik proporsional atau tren kurva antropometri ideal (Aman). |
-| **`Stunting`** | `1` | Foto/citra representasi balita dengan indikasi klinis perawakan pendek (*short stature*) atau kurva pertumbuhan di bawah batas kritis -2 SD WHO. |
