@@ -12,7 +12,22 @@ const calculateUmurBulan = (tanggal_lahir) => {
 // Mengambil semua data balita
 export const getAllDataBalita = async (req, res, next) => {
   try {
-    const result = await pool.query('SELECT * FROM data_balita ORDER BY created_at DESC');
+    const result = await pool.query(`
+      SELECT db.*, 
+             a.id as analisis_id,
+             a.status_stunting,
+             a.status_detail,
+             a.tingkat_risiko,
+             a.tingkat_risiko_detail,
+             a.indikator,
+             a.indikator_detail,
+             a.z_score,
+             a.rekomendasi,
+             a.rekomendasi_detail
+      FROM data_balita db
+      LEFT JOIN analisis a ON db.id = a.data_id
+      ORDER BY db.created_at DESC
+    `);
     res.status(200).json({
       success: true,
       count: result.rowCount,
@@ -55,9 +70,10 @@ export const createDataBalita = async (req, res, next) => {
       berat_badan, 
       tinggi_badan, 
       umur_bulan, 
-      foto_url, 
       created_by 
     } = req.body;
+
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!nama || !jenis_kelamin || !tanggal_lahir) {
       return res.status(400).json({

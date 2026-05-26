@@ -2,7 +2,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import MainLayout from './components/layout/MainLayout';
-import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Diagnosis from './pages/Diagnosis';
 import History from './pages/History';
@@ -14,9 +13,8 @@ const App = () => {
       <Routes>
         {/* Semua halaman yang pakai Navbar & Footer */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Diagnosis />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/diagnosis" element={<Diagnosis />} />
           <Route path="/history" element={<History />} />
         </Route>
 

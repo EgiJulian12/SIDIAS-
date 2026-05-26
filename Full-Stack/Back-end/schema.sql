@@ -22,10 +22,14 @@ CREATE TABLE analisis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     data_id UUID NOT NULL REFERENCES data_balita(id) ON DELETE CASCADE,
     status_stunting VARCHAR NOT NULL,
+    status_detail VARCHAR,
     tingkat_risiko VARCHAR,
+    tingkat_risiko_detail VARCHAR,
     indikator VARCHAR,
+    indikator_detail VARCHAR,
     z_score DECIMAL(4,2),
     rekomendasi TEXT,
+    rekomendasi_detail VARCHAR,
     model_version VARCHAR,
     analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

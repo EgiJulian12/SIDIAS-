@@ -52,6 +52,13 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - Merombak halaman `Diagnosis.jsx` menjadi *Form Input Data Balita* yang estetik menggunakan Tailwind CSS
 - Menguji alur *End-to-End* (E2E) untuk memastikan data dari form UI Frontend berhasil tersimpan ke dalam database PostgreSQL
 
+### 27 Mei 2026
+
+- **Unggah Foto & Boundary multipart/form-data**: Menyelaraskan konfigurasi penyimpanan foto menggunakan `multer` di Backend dan `Content-Type: undefined` di Frontend Axios untuk penanganan multipart form data.
+- **Penyempurnaan Skema Database (`analisis`)**: Menambahkan 4 kolom detail baru (`status_detail`, `tingkat_risiko_detail`, `indikator_detail`, dan `rekomendasi_detail`) ke skema database PostgreSQL (`schema.sql`).
+- **Refaktor Controller Analisis**: Memperbarui controller analisis (`createAnalisis` dan `updateAnalisis`) agar dapat menyimpan dan mengembalikan data detail baru dari database.
+- **Join Query Riwayat Balita**: Memperbarui fungsi `getAllDataBalita` menggunakan query `LEFT JOIN` ke tabel `analisis` agar data status analisis langsung tersaji saat mengambil riwayat balita.
+
 ---
 
 ## Tools
