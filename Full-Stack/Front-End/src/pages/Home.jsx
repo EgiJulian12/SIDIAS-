@@ -158,7 +158,7 @@ const Home = () => {
         onClick={handleSubmit}
         className="w-full rounded border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
-        Simpan Data
+        Simpan Data + Analisis
       </button>
 
       {/* Hasil Analisis */}
