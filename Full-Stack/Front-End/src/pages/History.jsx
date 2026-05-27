@@ -1,124 +1,231 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getAllDataBalita } from '../services/dataBalitaService';
+import MainLayout from "../components/layouts/MainLayout";
+
+import { motion } from "framer-motion";
+
+import { useEffect, useState } from "react";
+
+import {
+  FaSearch,
+  FaCalendarAlt,
+  FaWeight,
+  FaRulerVertical,
+  FaEllipsisH,
+  FaChartLine,
+} from "react-icons/fa";
 
 const History = () => {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [riwayatList, setRiwayatList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [search, setSearch] = useState("");
 
+  // Ambil data dari localStorage
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await getAllDataBalita();
-        if (res.success && res.data) {
-          setRiwayatList(res.data);
-        }
-      } catch (err) {
-        console.error(err);
-        setError('Gagal memuat data riwayat pemeriksaan.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    const storedData =
+      JSON.parse(localStorage.getItem("historyData")) || [];
+
+    setHistoryData(storedData);
   }, []);
 
-  const filtered = riwayatList.filter((item) =>
+  // Filter Search
+  const filteredData = historyData.filter((item) =>
     item.nama.toLowerCase().includes(search.toLowerCase())
   );
 
-  const apiHost = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
-
   return (
-    <div className="mx-auto max-w-2xl py-4">
-      {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">Riwayat Pemeriksaan</h2>
-          <p className="text-xs text-gray-550 mt-1">
-            Terdaftar <span className="font-semibold text-green-600">{riwayatList.length} data</span> balita
-          </p>
-        </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nama balita..."
-          className="rounded border border-gray-300 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-green-400 w-full sm:w-64 shadow-sm"
-        />
-      </div>
+    <MainLayout>
+      <div className="space-y-8">
 
-      {/* Loading state */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-4"></div>
-          <p className="text-gray-500 text-sm">Memuat riwayat...</p>
-        </div>
-      ) : error ? (
-        <div className="py-16 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">
-          {error}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-sm text-gray-400 bg-white rounded-lg border border-gray-200">
-          Belum ada data. Tambahkan pemeriksaan baru terlebih dahulu.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => navigate(`/?id=${item.id}`)}
-              className="group flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-300 cursor-pointer"
-            >
-              {/* Photo Thumbnail */}
-              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                {item.foto_url ? (
-                  <img
-                    src={`${apiHost}${item.foto_url}`}
-                    alt={item.nama}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <svg className="h-8 w-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                )}
-              </div>
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
 
-              {/* Balita Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-gray-800 text-sm group-hover:text-green-600 transition-colors truncate">
-                    {item.nama}
-                  </h3>
-                  {item.status_stunting && (
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      item.status_stunting.toLowerCase().includes('stunting') || item.status_stunting.toLowerCase().includes('resiko')
-                        ? 'bg-red-50 text-red-700 border border-red-150'
-                        : 'bg-green-50 text-green-700 border border-green-150'
-                    }`}>
-                      {item.status_stunting}
-                    </span>
-                  )}
-                </div>
-                
-                <p className="text-xs text-gray-500 mt-1">
-                  Lahir: {new Date(item.tanggal_lahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} ({item.umur_bulan} Bulan)
-                </p>
-                <div className="mt-2 flex gap-3 text-xs text-gray-650 font-medium">
-                  <span>BB: <strong className="text-gray-800">{item.berat_badan} kg</strong></span>
-                  <span className="text-gray-300">|</span>
-                  <span>TB: <strong className="text-gray-800">{item.tinggi_badan} cm</strong></span>
-                </div>
-              </div>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-700 px-4 py-2 rounded-full font-medium mb-4">
+              Riwayat Pelayanan
             </div>
-          ))}
+
+            <h1 className="text-4xl font-bold text-slate-800">
+              Data Riwayat Anak
+            </h1>
+
+            <p className="mt-3 text-slate-500 text-lg leading-relaxed max-w-2xl">
+              Pantau seluruh hasil pemeriksaan dan analisis kesehatan anak secara modern dan realtime.
+            </p>
+          </div>
+
+          {/* Search */}
+          <div className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-2xl px-5 py-4 shadow-lg flex items-center gap-4 w-full lg:w-[380px]">
+            <FaSearch className="text-slate-400 text-lg" />
+
+            <input
+              type="text"
+              placeholder="Cari nama anak..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-transparent outline-none text-slate-700 placeholder:text-slate-400"
+            />
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Data Exists */}
+        {filteredData.length > 0 ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+            {filteredData.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-[32px] p-6 shadow-xl hover:-translate-y-1 transition-all duration-300"
+              >
+
+                {/* Top */}
+                <div className="flex items-start justify-between">
+
+                  <div className="flex items-center gap-4">
+
+                    {/* Image */}
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.nama}
+                        className="w-16 h-16 rounded-3xl object-cover shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        {item.nama.charAt(0)}
+                      </div>
+                    )}
+
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">
+                        {item.nama}
+                      </h2>
+
+                      <p className="text-slate-500 mt-1">
+                        Pemeriksaan Anak
+                      </p>
+                    </div>
+                  </div>
+
+                  <button className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-teal-50 transition-all flex items-center justify-center text-slate-500">
+                    <FaEllipsisH />
+                  </button>
+                </div>
+
+                {/* Status */}
+                <div
+                  className={`mt-6 inline-flex items-center px-4 py-2 rounded-full font-semibold text-sm ${
+                    item.status === "Tidak Stunting"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {item.status}
+                </div>
+
+                {/* Grid Info */}
+                <div className="grid grid-cols-2 gap-4 mt-6">
+
+                  {/* Umur */}
+                  <div className="bg-slate-50 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                      <FaCalendarAlt />
+                      <span className="text-sm">
+                        Umur
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-slate-800">
+                      {item.umur}
+                    </h3>
+                  </div>
+
+                  {/* Berat */}
+                  <div className="bg-slate-50 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                      <FaWeight />
+                      <span className="text-sm">
+                        Berat
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-slate-800">
+                      {item.berat}
+                    </h3>
+                  </div>
+
+                  {/* Tinggi */}
+                  <div className="bg-slate-50 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                      <FaRulerVertical />
+                      <span className="text-sm">
+                        Tinggi
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-slate-800">
+                      {item.tinggi}
+                    </h3>
+                  </div>
+
+                  {/* Tanggal */}
+                  <div className="bg-slate-50 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                      <FaChartLine />
+                      <span className="text-sm">
+                        Tanggal
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-800">
+                      {item.tanggal}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Prediction */}
+                <div className="mt-6 bg-cyan-50 border border-cyan-100 rounded-3xl p-5">
+                  <h3 className="font-bold text-cyan-700 mb-3">
+                    Prediksi
+                  </h3>
+
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.prediction}
+                  </p>
+                </div>
+
+                {/* Recommendation */}
+                <div className="mt-5 bg-teal-50 border border-teal-100 rounded-3xl p-5">
+                  <h3 className="font-bold text-teal-700 mb-3">
+                    Rekomendasi
+                  </h3>
+
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.recommendation}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="bg-white/70 backdrop-blur-xl border border-dashed border-slate-200 rounded-[32px] p-10 text-center">
+
+            <div className="w-24 h-24 rounded-full bg-teal-100 flex items-center justify-center mx-auto text-4xl text-teal-500 mb-6">
+              📋
+            </div>
+
+            <h2 className="text-2xl font-bold text-slate-700">
+              Riwayat Belum Tersedia
+            </h2>
+
+            <p className="text-slate-500 mt-3 max-w-xl mx-auto leading-relaxed">
+              Data pelayanan anak yang sudah dianalisis akan muncul secara otomatis pada halaman ini.
+            </p>
+          </div>
+        )}
+      </div>
+    </MainLayout>
   );
 };
 
