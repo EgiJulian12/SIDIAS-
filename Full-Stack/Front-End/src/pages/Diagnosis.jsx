@@ -1,405 +1,493 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { createDataBalita, getDataBalitaById } from '../services/dataBalitaService';
-import { getAnalisisByDataId } from '../services/analisisService';
+import MainLayout from "../components/layouts/MainLayout";
+
+import { useRef, useState } from "react";
+
+import { useForm } from "react-hook-form";
+
+import { motion } from "framer-motion";
+
+import toast, { Toaster } from "react-hot-toast";
+
+import Webcam from "react-webcam";
+
+import {
+  FaUser,
+  FaWeight,
+  FaRulerVertical,
+  FaChild,
+  FaCamera,
+  FaImages,
+  FaHeartbeat,
+} from "react-icons/fa";
 
 const Diagnosis = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const idParam = searchParams.get('id');
+  const [preview, setPreview] = useState(null);
 
-  const [formData, setFormData] = useState({
-    nama: '',
-    jenis_kelamin: 'L',
-    tanggal_lahir: '',
-    berat_badan: '',
-    tinggi_badan: '',
-    umur_bulan: '',
-    foto: null
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  
-  // State untuk Panel Analisis
-  const [dataId, setDataId] = useState(null);
-  const [analisisLoading, setAnalisisLoading] = useState(false);
-  const [analisisResult, setAnalisisResult] = useState(null);
-  const [analisisError, setAnalisisError] = useState('');
-  
-  const pollingInterval = useRef(null);
+  const [result, setResult] = useState(null);
 
-  // Bersihkan interval saat komponen unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
-    };
-  }, []);
+  const [openCamera, setOpenCamera] = useState(false);
 
-  // Memuat data dari riwayat jika parameter ID tersedia
-  useEffect(() => {
-    if (idParam) {
-      const loadPreviousData = async () => {
-        try {
-          setAnalisisLoading(true);
-          setAnalisisResult(null);
-          setAnalisisError('');
-          setDataId(idParam);
+  const webcamRef = useRef(null);
 
-          // 1. Ambil data balita
-          const balitaRes = await getDataBalitaById(idParam);
-          if (balitaRes && balitaRes.success && balitaRes.data) {
-            const b = balitaRes.data;
-            const formattedDate = b.tanggal_lahir ? new Date(b.tanggal_lahir).toISOString().split('T')[0] : '';
-            setFormData({
-              nama: b.nama || '',
-              jenis_kelamin: b.jenis_kelamin || 'L',
-              tanggal_lahir: formattedDate,
-              berat_badan: b.berat_badan || '',
-              tinggi_badan: b.tinggi_badan || '',
-              umur_bulan: b.umur_bulan || '',
-              foto: null
-            });
-          }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm();
 
-          // 2. Ambil data analisis
-          const result = await getAnalisisByDataId(idParam);
-          if (result && result.data) {
-            setAnalisisResult(result.data);
-          } else {
-            setAnalisisError('Tidak ada data');
-          }
-        } catch (err) {
-          console.error('Error loading previous analysis:', err);
-          setAnalisisError('Tidak ada data');
-        } finally {
-          setAnalisisLoading(false);
-        }
-      };
+  // Upload dari galeri
+  const handleImage = (e) => {
+    const file = e.target.files[0];
 
-      loadPreviousData();
-    } else {
-      // Jika parameter id kosong, reset state form ke kosong
-      setFormData({
-        nama: '',
-        jenis_kelamin: 'L',
-        tanggal_lahir: '',
-        berat_badan: '',
-        tinggi_badan: '',
-        umur_bulan: '',
-        foto: null
-      });
-      setDataId(null);
-      setAnalisisResult(null);
-      setAnalisisError('');
-    }
-  }, [idParam]);
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
 
-  // Fungsi untuk menangani perubahan input
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'foto') {
-      setFormData((prev) => ({ ...prev, foto: files[0] }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setPreview(imageUrl);
+
+      toast.success("Foto berhasil dipilih");
     }
   };
 
-  const startPollingAnalisis = (id) => {
-    setAnalisisLoading(true);
-    setAnalisisResult(null);
-    setAnalisisError('');
-    
-    let attempts = 0;
-    const maxAttempts = 5; // 5 * 2 detik = 10 detik
+  // Capture webcam
+  const capturePhoto = () => {
+    const imageSrc =
+      webcamRef.current.getScreenshot();
 
-    const poll = async () => {
-      attempts++;
-      try {
-        const result = await getAnalisisByDataId(id);
-        if (result && result.data) {
-          setAnalisisResult(result.data);
-          setAnalisisLoading(false);
-          clearInterval(pollingInterval.current);
-          return;
-        }
-      } catch (err) {
-        // Abaikan error saat polling (misal 404 karena belum ada)
-      }
-      
-      if (attempts >= maxAttempts) {
-        setAnalisisError('Tidak ada data');
-        setAnalisisLoading(false);
-        clearInterval(pollingInterval.current);
-      }
-    };
+    setPreview(imageSrc);
 
-    // Polling setiap 2 detik
-    pollingInterval.current = setInterval(poll, 2000);
-    // Jalankan segera percobaan pertama
-    poll();
+    setOpenCamera(false);
+
+    toast.success("Foto berhasil diambil");
   };
 
-  // Fungsi untuk mengirim data saat form disubmit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-    setDataId(null);
-    setAnalisisResult(null);
-    setAnalisisError('');
-
-    try {
-      const data = new FormData();
-      data.append('nama', formData.nama);
-      data.append('jenis_kelamin', formData.jenis_kelamin);
-      data.append('tanggal_lahir', formData.tanggal_lahir);
-      data.append('berat_badan', formData.berat_badan);
-      data.append('tinggi_badan', formData.tinggi_badan);
-      data.append('umur_bulan', formData.umur_bulan);
-      if (formData.foto) {
-        data.append('foto', formData.foto);
-      }
-
-      // Mengirim request ke backend
-      const response = await createDataBalita(data);
-      setMessage({ type: 'success', text: 'Data balita berhasil disimpan!' });
-      
-      if (response.data && response.data.id) {
-        setDataId(response.data.id);
-        startPollingAnalisis(response.data.id);
-      }
-
-      // Reset form
-      setFormData({
-        nama: '',
-        jenis_kelamin: 'L',
-        tanggal_lahir: '',
-        berat_badan: '',
-        tinggi_badan: '',
-        umur_bulan: '',
-        foto: null
-      });
-      // Reset file input
-      const fileInput = document.getElementById('foto_upload');
-      if (fileInput) fileInput.value = '';
-
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat menyimpan data.' });
-    } finally {
-      setLoading(false);
+  // Submit
+  const onSubmit = (data) => {
+    if (!preview) {
+      toast.error("Foto anak wajib diupload");
+      return;
     }
+
+    const tinggiMeter = data.tinggi / 100;
+
+    const bmi =
+      data.berat / (tinggiMeter * tinggiMeter);
+
+    let status = "";
+    let prediction = "";
+    let recommendation = "";
+
+    // Simulasi Deteksi
+    if (bmi < 14) {
+      status = "Terindikasi Stunting";
+
+      prediction =
+        "Anak memiliki risiko mengalami stunting apabila pertumbuhan tidak dipantau dan kebutuhan gizi tidak terpenuhi.";
+
+      recommendation =
+        "Tingkatkan konsumsi protein, susu, vitamin, makanan bergizi seimbang, dan lakukan pemeriksaan rutin ke posyandu.";
+    } else {
+      status = "Tidak Stunting";
+
+      prediction =
+        "Pertumbuhan anak saat ini tergolong baik dan stabil berdasarkan data yang dimasukkan.";
+
+      recommendation =
+        "Pertahankan pola makan sehat, aktivitas fisik, nutrisi seimbang, dan pemeriksaan rutin setiap bulan.";
+    }
+
+    // Simpan History
+    const newHistory = {
+      id: Date.now(),
+      nama: data.nama,
+      umur: `${data.umur} Bulan`,
+      berat: `${data.berat} Kg`,
+      tinggi: `${data.tinggi} Cm`,
+      tanggal: new Date().toLocaleDateString("id-ID"),
+      status,
+      prediction,
+      recommendation,
+      image: preview,
+    };
+
+    const existingHistory =
+      JSON.parse(localStorage.getItem("historyData")) || [];
+
+    localStorage.setItem(
+      "historyData",
+      JSON.stringify([newHistory, ...existingHistory])
+    );
+
+    // Set Result
+    setResult({
+      status,
+      prediction,
+      recommendation,
+    });
+
+    toast.success("Analisis berhasil dilakukan");
+
+    reset();
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md border border-gray-100 mt-8 mb-12">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Input Data Balita</h1>
-      
-      {idParam && (
-        <div className="p-4 mb-6 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-150 flex items-center justify-between">
-          <p className="text-sm font-medium">
-            🔍 Mode Riwayat: Menampilkan data pemeriksaan sebelumnya.
+    <MainLayout>
+      <Toaster position="top-right" />
+
+      <div className="space-y-8">
+
+        {/* Header */}
+        <div>
+          <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-700 px-4 py-2 rounded-full font-medium mb-4">
+            Pelayanan Posyandu
+          </div>
+
+          <h1 className="text-4xl font-bold text-slate-800">
+            Analisis Pertumbuhan Anak
+          </h1>
+
+          <p className="mt-3 text-slate-500 text-lg leading-relaxed max-w-2xl">
+            Input data anak untuk melakukan analisis pertumbuhan dan deteksi risiko stunting secara modern.
           </p>
-          <button
-            onClick={() => setSearchParams({})}
-            className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-1.5 px-3 rounded shadow-sm transition duration-300"
+        </div>
+
+        {/* Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-[36px] shadow-2xl p-6 md:p-10"
+        >
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-8"
           >
-            Mulai Input Baru
-          </button>
-        </div>
-      )}
 
-      {message.text && (
-        <div className={`p-4 mb-6 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message.text}
-        </div>
-      )}
+            {/* Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nama Balita</label>
-          <input
-            type="text"
-            name="nama"
-            value={formData.nama}
-            onChange={handleChange}
-            required
-            disabled={!!idParam}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-            placeholder="Masukkan nama lengkap"
-          />
-        </div>
+              {/* Nama */}
+              <div>
+                <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
+                  <FaUser className="text-teal-500" />
+                  Nama Anak
+                </label>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
-            <select
-              name="jenis_kelamin"
-              value={formData.jenis_kelamin}
-              onChange={handleChange}
-              disabled={!!idParam}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-            >
-              <option value="L">Laki-laki (L)</option>
-              <option value="P">Perempuan (P)</option>
-            </select>
-          </div>
+                <input
+                  type="text"
+                  placeholder="Masukkan nama anak"
+                  {...register("nama", {
+                    required: "Nama wajib diisi",
+                  })}
+                  className={`w-full rounded-2xl border px-5 py-4 text-slate-700 outline-none transition-all ${
+                    errors.nama
+                      ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                      : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                  }`}
+                />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
-            <input
-              type="date"
-              name="tanggal_lahir"
-              value={formData.tanggal_lahir}
-              onChange={handleChange}
-              required
-              disabled={!!idParam}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Berat Badan (kg)</label>
-            <input
-              type="number"
-              step="0.01"
-              name="berat_badan"
-              value={formData.berat_badan}
-              onChange={handleChange}
-              required
-              disabled={!!idParam}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-              placeholder="Contoh: 12.5"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tinggi Badan (cm)</label>
-            <input
-              type="number"
-              step="0.01"
-              name="tinggi_badan"
-              value={formData.tinggi_badan}
-              onChange={handleChange}
-              required
-              disabled={!!idParam}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-              placeholder="Contoh: 85.0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Umur (Bulan)</label>
-            <input
-              type="number"
-              name="umur_bulan"
-              value={formData.umur_bulan}
-              onChange={handleChange}
-              required
-              disabled={!!idParam}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-              placeholder="Contoh: 24"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Foto Balita (Opsional)</label>
-          <input
-            id="foto_upload"
-            type="file"
-            name="foto"
-            accept="image/*"
-            onChange={handleChange}
-            disabled={!!idParam}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white disabled:bg-gray-100 disabled:text-gray-600"
-          />
-          <p className="text-xs text-gray-500 mt-1">Format: JPG, PNG. Maksimal 5MB.</p>
-        </div>
-
-        {idParam ? (
-          <button
-            type="button"
-            onClick={() => setSearchParams({})}
-            className="w-full py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition duration-300 shadow-sm"
-          >
-            Mulai Input Baru
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 rounded-lg text-white font-semibold transition duration-300 ${
-              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {loading ? 'Menyimpan...' : 'Simpan Data'}
-          </button>
-        )}
-      </form>
-
-      {/* PANEL ANALISIS */}
-      {dataId && (
-        <div className="mt-10 p-6 bg-gray-50 rounded-xl border border-gray-250 transition-all duration-500 ease-in-out">
-          {analisisLoading ? (
-            <div className="flex flex-col items-center justify-center py-6">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-blue-700 font-medium">Sedang memproses analisis AI...</p>
-              <p className="text-blue-500 text-sm mt-1">Harap tunggu maksimal 10 detik</p>
-            </div>
-          ) : analisisError ? (
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-500 mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                {errors.nama && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.nama.message}
+                  </p>
+                )}
               </div>
-              <p className="text-gray-600 font-medium text-lg">({analisisError})</p>
-              <p className="text-gray-500 text-sm mt-1">Data analisis tidak ditemukan untuk balita ini.</p>
+
+              {/* Umur */}
+              <div>
+                <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
+                  <FaChild className="text-teal-500" />
+                  Umur Anak
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Contoh: 24"
+                    {...register("umur", {
+                      required: "Umur wajib diisi",
+                      min: {
+                        value: 0,
+                        message: "Umur tidak boleh negatif",
+                      },
+                    })}
+                    className={`w-full rounded-2xl border px-5 py-4 pr-24 text-slate-700 outline-none transition-all ${
+                      errors.umur
+                        ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                        : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                    }`}
+                  />
+
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                    Bulan
+                  </span>
+                </div>
+
+                {errors.umur && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.umur.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Berat */}
+              <div>
+                <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
+                  <FaWeight className="text-teal-500" />
+                  Berat Badan
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Contoh: 12"
+                    {...register("berat", {
+                      required: "Berat badan wajib diisi",
+                      min: {
+                        value: 0,
+                        message: "Berat badan tidak boleh negatif",
+                      },
+                    })}
+                    className={`w-full rounded-2xl border px-5 py-4 pr-20 text-slate-700 outline-none transition-all ${
+                      errors.berat
+                        ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                        : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                    }`}
+                  />
+
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                    Kg
+                  </span>
+                </div>
+
+                {errors.berat && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.berat.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Tinggi */}
+              <div>
+                <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
+                  <FaRulerVertical className="text-teal-500" />
+                  Tinggi Badan
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Contoh: 85"
+                    {...register("tinggi", {
+                      required: "Tinggi badan wajib diisi",
+                      min: {
+                        value: 0,
+                        message: "Tinggi badan tidak boleh negatif",
+                      },
+                    })}
+                    className={`w-full rounded-2xl border px-5 py-4 pr-20 text-slate-700 outline-none transition-all ${
+                      errors.tinggi
+                        ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                        : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                    }`}
+                  />
+
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                    Cm
+                  </span>
+                </div>
+
+                {errors.tinggi && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.tinggi.message}
+                  </p>
+                )}
+              </div>
             </div>
-          ) : analisisResult ? (
-            <div>
-              <h2 className="mb-6 text-center text-lg font-bold text-gray-800 tracking-wider">
-                HASIL ANALISIS
+
+            {/* Upload Foto */}
+            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-[32px] p-8 text-center">
+
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center mx-auto text-white text-4xl shadow-xl mb-6">
+                📸
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-700">
+                Upload Foto Anak
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  {
-                    label: 'Status Stunting Bayi',
-                    value: analisisResult.status_stunting,
-                    sub: analisisResult.status_detail || '-',
-                  },
-                  {
-                    label: 'Tingkat Risiko Stunting',
-                    value: analisisResult.tingkat_risiko || '-',
-                    sub: analisisResult.tingkat_risiko_detail || '-',
-                  },
-                  {
-                    label: 'Indikator Utama Stunting',
-                    value: analisisResult.indikator || '-',
-                    sub: analisisResult.indikator_detail || '-',
-                  },
-                  {
-                    label: 'Rekomendasi Tindak Lanjut',
-                    value: analisisResult.rekomendasi || '-',
-                    sub: analisisResult.rekomendasi_detail || '-',
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-gray-250 bg-white p-4 text-center shadow-sm flex flex-col justify-center min-h-[120px]"
-                  >
-                    <p className="mb-2 text-xs text-gray-500 font-medium">{item.label}</p>
-                    <p className="text-sm font-bold text-gray-800">{item.value}</p>
-                    <p className="mt-1 text-xs text-gray-400">{item.sub}</p>
-                  </div>
-                ))}
+
+              <p className="text-slate-500 mt-3 mb-8">
+                Ambil foto langsung dari kamera atau pilih dari galeri.
+              </p>
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+                {/* Kamera */}
+                <button
+                  type="button"
+                  onClick={() => setOpenCamera(true)}
+                  className="bg-gradient-to-r from-teal-400 to-cyan-500 text-white px-6 py-4 rounded-2xl font-semibold shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-3"
+                >
+                  <FaCamera />
+                  Buka Kamera
+                </button>
+
+                {/* Galeri */}
+                <label className="cursor-pointer bg-white border border-slate-200 text-slate-700 px-6 py-4 rounded-2xl font-semibold shadow-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
+
+                  <FaImages />
+
+                  Pilih Dari Galeri
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImage}
+                    className="hidden"
+                  />
+                </label>
               </div>
+
+              {/* Preview */}
+              {preview && (
+                <div className="mt-8">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-48 h-48 object-cover rounded-[32px] mx-auto shadow-xl border-4 border-white"
+                  />
+                </div>
+              )}
             </div>
-          ) : null}
+
+            {/* Result */}
+            {result && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-teal-400 to-cyan-500 rounded-[36px] p-8 text-white shadow-2xl"
+              >
+
+                <div className="flex items-center gap-3 mb-8">
+                  <FaHeartbeat className="text-3xl" />
+
+                  <h2 className="text-3xl font-bold">
+                    Hasil Analisis Anak
+                  </h2>
+                </div>
+
+                <div className="space-y-6">
+
+                  <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
+                    <h3 className="text-xl font-bold mb-3">
+                      Status Deteksi
+                    </h3>
+
+                    <p className="text-white/90 leading-relaxed text-lg">
+                      {result.status}
+                    </p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
+                    <h3 className="text-xl font-bold mb-3">
+                      Prediksi Kedepan
+                    </h3>
+
+                    <p className="text-white/90 leading-relaxed text-lg">
+                      {result.prediction}
+                    </p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
+                    <h3 className="text-xl font-bold mb-3">
+                      Rekomendasi
+                    </h3>
+
+                    <p className="text-white/90 leading-relaxed text-lg">
+                      {result.recommendation}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-5 rounded-3xl text-lg font-semibold shadow-xl hover:scale-[1.01] transition-all"
+            >
+              Simpan & Analisis Data Anak
+            </button>
+          </form>
+        </motion.div>
+      </div>
+
+      {/* Camera Modal */}
+      {openCamera && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[999] flex items-center justify-center p-4">
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[36px] p-6 w-full max-w-2xl shadow-2xl"
+          >
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+
+              <h2 className="text-2xl font-bold text-slate-800">
+                Kamera Anak
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setOpenCamera(false)}
+                className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 hover:bg-red-100 transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Webcam */}
+            <div className="overflow-hidden rounded-[32px] shadow-xl">
+
+              <Webcam
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="w-full"
+                videoConstraints={{
+                  facingMode: "environment",
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex-1 bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-4 rounded-2xl font-semibold shadow-lg hover:scale-[1.02] transition-all"
+              >
+                📸 Ambil Foto
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOpenCamera(false)}
+                className="flex-1 bg-slate-100 text-slate-700 py-4 rounded-2xl font-semibold hover:bg-slate-200 transition-all"
+              >
+                Tutup
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </MainLayout>
   );
 };
 
