@@ -1,28 +1,50 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import MainLayout from './components/layout/MainLayout';
-import Dashboard from './pages/Dashboard';
-import Diagnosis from './pages/Diagnosis';
-import History from './pages/History';
-import NotFound from './pages/NotFound';
+import Dashboard from "./pages/Dashboard";
+import Diagnosis from "./pages/Diagnosis";
+import History from "./pages/History";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
-const App = () => {
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Semua halaman yang pakai Navbar & Footer */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Diagnosis />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/history" element={<History />} />
-        </Route>
 
-        {/* Halaman 404 */}
-        <Route path="*" element={<NotFound />} />
+        {/* Default Redirect */}
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" />}
+        />
+
+        {/* Pages */}
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/diagnosis"
+          element={<Diagnosis />}
+        />
+
+        <Route
+          path="/history"
+          element={<History />}
+        />
+
+        <Route 
+        path="/login" 
+        element={<Login />} />
+
+
+        <Route 
+        path="/signup" 
+        element={<Signup />} />
+
       </Routes>
     </BrowserRouter>
   );
-};
+}
 
 export default App;
