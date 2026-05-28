@@ -1,4 +1,4 @@
-import MainLayout from "../components/layouts/MainLayout";
+import MainLayout from "../components/layout/MainLayout";
 
 import { useRef, useState } from "react";
 
@@ -10,6 +10,8 @@ import toast, { Toaster } from "react-hot-toast";
 
 import Webcam from "react-webcam";
 
+import api from "../services/api";
+
 import {
   FaUser,
   FaWeight,
@@ -18,14 +20,25 @@ import {
   FaCamera,
   FaImages,
   FaHeartbeat,
+  FaCalendarAlt,
 } from "react-icons/fa";
+
+// Helper untuk konversi Base64 webcam ke file blob
+const dataURLtoFile = (dataurl, filename) => {
+  let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+  bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+  while(n--){
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, {type:mime});
+};
 
 const Diagnosis = () => {
   const [preview, setPreview] = useState(null);
-
+  const [imageFile, setImageFile] = useState(null);
   const [result, setResult] = useState(null);
-
   const [openCamera, setOpenCamera] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const webcamRef = useRef(null);
 
@@ -36,98 +49,129 @@ const Diagnosis = () => {
     reset,
   } = useForm();
 
+  // Hitung Umur Bulan dari Tanggal Lahir
+  const calculateAgeInMonths = (birthDate) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let months = (today.getFullYear() - birth.getFullYear()) * 12;
+    months -= birth.getMonth();
+    months += today.getMonth();
+    return months <= 0 ? 0 : months;
+  };
+
   // Upload dari galeri
   const handleImage = (e) => {
     const file = e.target.files[0];
 
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-
       setPreview(imageUrl);
-
+      setImageFile(file);
       toast.success("Foto berhasil dipilih");
     }
   };
 
   // Capture webcam
   const capturePhoto = () => {
-    const imageSrc =
-      webcamRef.current.getScreenshot();
+    const imageSrc = webcamRef.current.getScreenshot();
 
     setPreview(imageSrc);
+    
+    // Konversi base64 ke file untuk dikirim via FormData
+    const file = dataURLtoFile(imageSrc, `webcam_${Date.now()}.jpg`);
+    setImageFile(file);
 
     setOpenCamera(false);
 
     toast.success("Foto berhasil diambil");
   };
 
-  // Submit
-  const onSubmit = (data) => {
-    if (!preview) {
-      toast.error("Foto anak wajib diupload");
+  // Submit ke Backend
+  const onSubmit = async (data) => {
+    if (!preview || !imageFile) {
+      toast.error("Foto anak wajib diupload atau diambil");
       return;
     }
 
-    const tinggiMeter = data.tinggi / 100;
+    setIsLoading(true);
+    const calculatedUmur = calculateAgeInMonths(data.tanggal_lahir);
 
-    const bmi =
-      data.berat / (tinggiMeter * tinggiMeter);
+    try {
+      // 1. Simpan ke tabel data_balita
+      const formDataToSend = new FormData();
+      formDataToSend.append("nama", data.nama);
+      formDataToSend.append("jenis_kelamin", data.jenis_kelamin);
+      formDataToSend.append("tanggal_lahir", data.tanggal_lahir);
+      formDataToSend.append("berat_badan", data.berat);
+      formDataToSend.append("tinggi_badan", data.tinggi);
+      formDataToSend.append("umur_bulan", calculatedUmur);
+      formDataToSend.append("foto", imageFile);
 
-    let status = "";
-    let prediction = "";
-    let recommendation = "";
+      const resBalita = await api.post("/data-balita", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    // Simulasi Deteksi
-    if (bmi < 14) {
-      status = "Terindikasi Stunting";
+      const balitaId = resBalita.data.data.id;
 
-      prediction =
-        "Anak memiliki risiko mengalami stunting apabila pertumbuhan tidak dipantau dan kebutuhan gizi tidak terpenuhi.";
+      // 2. Lakukan perhitungan stunting
+      const tinggiMeter = data.tinggi / 100;
+      const bmi = data.berat / (tinggiMeter * tinggiMeter);
 
-      recommendation =
-        "Tingkatkan konsumsi protein, susu, vitamin, makanan bergizi seimbang, dan lakukan pemeriksaan rutin ke posyandu.";
-    } else {
-      status = "Tidak Stunting";
+      let status = "";
+      let prediction = "";
+      let recommendation = "";
+      let tingkatRisiko = "";
 
-      prediction =
-        "Pertumbuhan anak saat ini tergolong baik dan stabil berdasarkan data yang dimasukkan.";
+      if (bmi < 14) {
+        status = "Terindikasi Stunting";
+        tingkatRisiko = "Tinggi";
+        prediction =
+          "Anak memiliki risiko mengalami stunting apabila pertumbuhan tidak dipantau dan kebutuhan gizi tidak terpenuhi.";
+        recommendation =
+          "Tingkatkan konsumsi protein, susu, vitamin, makanan bergizi seimbang, dan lakukan pemeriksaan rutin ke posyandu.";
+      } else {
+        status = "Tidak Stunting";
+        tingkatRisiko = "Rendah";
+        prediction =
+          "Pertumbuhan anak saat ini tergolong baik dan stabil berdasarkan data yang dimasukkan.";
+        recommendation =
+          "Pertahankan pola makan sehat, aktivitas fisik, nutrisi seimbang, dan pemeriksaan rutin setiap bulan.";
+      }
 
-      recommendation =
-        "Pertahankan pola makan sehat, aktivitas fisik, nutrisi seimbang, dan pemeriksaan rutin setiap bulan.";
+      // 3. Simpan analisis ke tabel analisis
+      await api.post("/analisis", {
+        data_id: balitaId,
+        status_stunting: status,
+        status_detail: status,
+        tingkat_risiko: tingkatRisiko,
+        tingkat_risiko_detail: prediction,
+        indikator: "BMI untuk Umur",
+        indikator_detail: `BMI Anak: ${bmi.toFixed(2)}`,
+        z_score: bmi.toFixed(2),
+        rekomendasi: recommendation,
+        rekomendasi_detail: recommendation,
+      });
+
+      // 4. Tampilkan hasil
+      setResult({
+        status,
+        prediction,
+        recommendation,
+      });
+
+      toast.success("Analisis berhasil disimpan ke database");
+      reset();
+      setPreview(null);
+      setImageFile(null);
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Gagal menyimpan analisis";
+      toast.error(msg);
+    } finally {
+      setIsLoading(false);
     }
-
-    // Simpan History
-    const newHistory = {
-      id: Date.now(),
-      nama: data.nama,
-      umur: `${data.umur} Bulan`,
-      berat: `${data.berat} Kg`,
-      tinggi: `${data.tinggi} Cm`,
-      tanggal: new Date().toLocaleDateString("id-ID"),
-      status,
-      prediction,
-      recommendation,
-      image: preview,
-    };
-
-    const existingHistory =
-      JSON.parse(localStorage.getItem("historyData")) || [];
-
-    localStorage.setItem(
-      "historyData",
-      JSON.stringify([newHistory, ...existingHistory])
-    );
-
-    // Set Result
-    setResult({
-      status,
-      prediction,
-      recommendation,
-    });
-
-    toast.success("Analisis berhasil dilakukan");
-
-    reset();
   };
 
   return (
@@ -193,40 +237,57 @@ const Diagnosis = () => {
                 )}
               </div>
 
-              {/* Umur */}
+              {/* Jenis Kelamin */}
               <div>
                 <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
                   <FaChild className="text-teal-500" />
-                  Umur Anak
+                  Jenis Kelamin
                 </label>
 
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Contoh: 24"
-                    {...register("umur", {
-                      required: "Umur wajib diisi",
-                      min: {
-                        value: 0,
-                        message: "Umur tidak boleh negatif",
-                      },
-                    })}
-                    className={`w-full rounded-2xl border px-5 py-4 pr-24 text-slate-700 outline-none transition-all ${
-                      errors.umur
-                        ? "border-red-400 focus:ring-4 focus:ring-red-100"
-                        : "border-slate-200 focus:ring-4 focus:ring-teal-100"
-                    }`}
-                  />
+                <select
+                  {...register("jenis_kelamin", {
+                    required: "Jenis kelamin wajib diisi",
+                  })}
+                  className={`w-full rounded-2xl border px-5 py-4 text-slate-700 outline-none transition-all ${
+                    errors.jenis_kelamin
+                      ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                      : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                  }`}
+                >
+                  <option value="">Pilih Jenis Kelamin</option>
+                  <option value="L">Laki-laki (L)</option>
+                  <option value="P">Perempuan (P)</option>
+                </select>
 
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
-                    Bulan
-                  </span>
-                </div>
-
-                {errors.umur && (
+                {errors.jenis_kelamin && (
                   <p className="text-red-500 text-sm mt-2">
-                    {errors.umur.message}
+                    {errors.jenis_kelamin.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Tanggal Lahir */}
+              <div>
+                <label className="text-slate-700 font-semibold mb-3 flex items-center gap-2">
+                  <FaCalendarAlt className="text-teal-500" />
+                  Tanggal Lahir
+                </label>
+
+                <input
+                  type="date"
+                  {...register("tanggal_lahir", {
+                    required: "Tanggal lahir wajib diisi",
+                  })}
+                  className={`w-full rounded-2xl border px-5 py-4 text-slate-700 outline-none transition-all ${
+                    errors.tanggal_lahir
+                      ? "border-red-400 focus:ring-4 focus:ring-red-100"
+                      : "border-slate-200 focus:ring-4 focus:ring-teal-100"
+                  }`}
+                />
+
+                {errors.tanggal_lahir && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {errors.tanggal_lahir.message}
                   </p>
                 )}
               </div>
@@ -242,6 +303,7 @@ const Diagnosis = () => {
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     placeholder="Contoh: 12"
                     {...register("berat", {
                       required: "Berat badan wajib diisi",
@@ -280,6 +342,7 @@ const Diagnosis = () => {
                   <input
                     type="number"
                     min="0"
+                    step="0.1"
                     placeholder="Contoh: 85"
                     {...register("tinggi", {
                       required: "Tinggi badan wajib diisi",
@@ -418,9 +481,10 @@ const Diagnosis = () => {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-5 rounded-3xl text-lg font-semibold shadow-xl hover:scale-[1.01] transition-all"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-5 rounded-3xl text-lg font-semibold shadow-xl hover:scale-[1.01] transition-all disabled:opacity-55"
             >
-              Simpan & Analisis Data Anak
+              {isLoading ? "Sedang Menyimpan..." : "Simpan & Analisis Data Anak"}
             </button>
           </form>
         </motion.div>

@@ -6,9 +6,11 @@ import { Link, useNavigate } from "react-router-dom";
 
 import toast, { Toaster } from "react-hot-toast";
 
+import api from "../services/api";
+
 import {
   FaHeartbeat,
-  FaEnvelope,
+  FaUser,
   FaLock,
   FaArrowRight,
 } from "react-icons/fa";
@@ -17,7 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: "",
+    nik: "",
     password: "",
   });
 
@@ -28,28 +30,30 @@ const Login = () => {
     });
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!formData.email || !formData.password) {
-      return toast.error("Semua field wajib diisi");
+    if (!formData.nik || !formData.password) {
+      return toast.error("NIK dan password wajib diisi");
     }
 
-    // SIMULASI LOGIN
-    localStorage.setItem("sidias_login", true);
+    try {
+      const response = await api.post("/auth/login", formData);
+      const { token, user } = response.data;
 
-    localStorage.setItem(
-      "sidias_user",
-      JSON.stringify({
-        email: formData.email,
-      })
-    );
+      localStorage.setItem("sidias_token", token);
+      localStorage.setItem("sidias_login", "true");
+      localStorage.setItem("sidias_user", JSON.stringify(user));
 
-    toast.success("Login berhasil");
+      toast.success("Login berhasil");
 
-    setTimeout(() => {
-      navigate("/");
-    }, 1500);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+    } catch (error) {
+      const message = error.response?.data?.message || "Login gagal";
+      toast.error(message);
+    }
   };
 
   return (
@@ -83,23 +87,24 @@ const Login = () => {
           {/* FORM */}
           <form onSubmit={handleLogin} className="space-y-5">
 
-            {/* EMAIL */}
+            {/* NIK */}
             <div>
 
               <label className="text-slate-700 font-semibold block mb-2">
-                Email
+                NIK
               </label>
 
               <div className="relative">
 
-                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
 
                 <input
-                  type="email"
-                  name="email"
-                  placeholder="Masukkan email"
-                  value={formData.email}
+                  type="text"
+                  name="nik"
+                  placeholder="Masukkan 16 digit NIK"
+                  value={formData.nik}
                   onChange={handleChange}
+                  maxLength={16}
                   className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>

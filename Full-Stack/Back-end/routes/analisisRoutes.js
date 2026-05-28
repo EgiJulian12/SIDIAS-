@@ -7,8 +7,12 @@ import {
   updateAnalisis,
   deleteAnalisis
 } from '../controllers/analisisController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Semua rute di bawah membutuhkan autentikasi
+router.use(authMiddleware);
 
 // Rute untuk mengambil semua data dan menambah analisis baru
 router.route('/')

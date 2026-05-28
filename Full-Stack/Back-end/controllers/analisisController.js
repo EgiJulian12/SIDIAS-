@@ -1,9 +1,41 @@
 import { pool } from '../config/db.js';
 
-// Mengambil semua data analisis
+// Mengambil semua data analisis (Admin mendapat semua, User hanya yang ia buat)
 export const getAllAnalisis = async (req, res, next) => {
   try {
-    const result = await pool.query('SELECT * FROM analisis ORDER BY analyzed_at DESC');
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query(`
+        SELECT a.*, 
+               db.nama, 
+               db.jenis_kelamin, 
+               db.tanggal_lahir, 
+               db.berat_badan, 
+               db.tinggi_badan, 
+               db.umur_bulan, 
+               db.foto_url, 
+               db.created_by
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        ORDER BY a.analyzed_at DESC
+      `);
+    } else {
+      result = await pool.query(`
+        SELECT a.*, 
+               db.nama, 
+               db.jenis_kelamin, 
+               db.tanggal_lahir, 
+               db.berat_badan, 
+               db.tinggi_badan, 
+               db.umur_bulan, 
+               db.foto_url, 
+               db.created_by
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE db.created_by = $1
+        ORDER BY a.analyzed_at DESC
+      `, [req.user.nik]);
+    }
     res.status(200).json({
       success: true,
       count: result.rowCount,
@@ -18,12 +50,22 @@ export const getAllAnalisis = async (req, res, next) => {
 export const getAnalisisById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    } else {
+      result = await pool.query(`
+        SELECT a.* 
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE a.id = $1 AND db.created_by = $2
+      `, [id, req.user.nik]);
+    }
 
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data analisis tidak ditemukan'
+        message: 'Data analisis tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
@@ -40,17 +82,27 @@ export const getAnalisisById = async (req, res, next) => {
 export const getAnalisisByDataId = async (req, res, next) => {
   try {
     const { data_id } = req.params;
-    const result = await pool.query('SELECT * FROM analisis WHERE data_id = $1 ORDER BY analyzed_at DESC', [data_id]);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('SELECT * FROM analisis WHERE data_id = $1 ORDER BY analyzed_at DESC', [data_id]);
+    } else {
+      result = await pool.query(`
+        SELECT a.* 
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE a.data_id = $1 AND db.created_by = $2 
+        ORDER BY a.analyzed_at DESC
+      `, [data_id, req.user.nik]);
+    }
 
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data analisis untuk balita ini tidak ditemukan'
+        message: 'Data analisis untuk balita ini tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
     // Biasanya kita mengembalikan data yang paling baru
-    // Implementasi sebelumnya menggunakan .find() yang mengembalikan kecocokan pertama.
     res.status(200).json({
       success: true,
       data: result.rows[0]
@@ -83,12 +135,18 @@ export const createAnalisis = async (req, res, next) => {
       });
     }
 
-    // Memastikan data balita ada
-    const balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1', [data_id]);
+    // Memastikan data balita ada dan milik user (jika bukan admin)
+    let balitaExists;
+    if (req.user.role === 'admin') {
+      balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1', [data_id]);
+    } else {
+      balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1 AND created_by = $2', [data_id, req.user.nik]);
+    }
+
     if (balitaExists.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data balita dengan data_id tersebut tidak ditemukan'
+        message: 'Data balita tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
@@ -144,12 +202,25 @@ export const updateAnalisis = async (req, res, next) => {
       rekomendasi_detail
     } = req.body;
 
-    const currentAnalisis = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    // Cek kepemilikan
+    const checkRes = await pool.query(`
+      SELECT a.*, db.created_by 
+      FROM analisis a
+      JOIN data_balita db ON a.data_id = db.id
+      WHERE a.id = $1
+    `, [id]);
 
-    if (currentAnalisis.rowCount === 0) {
+    if (checkRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data analisis tidak ditemukan'
+      });
+    }
+
+    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Ini bukan data analisis balita Anda.'
       });
     }
 
@@ -193,14 +264,30 @@ export const updateAnalisis = async (req, res, next) => {
 export const deleteAnalisis = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM analisis WHERE id = $1 RETURNING *', [id]);
 
-    if (result.rowCount === 0) {
+    // Cek kepemilikan
+    const checkRes = await pool.query(`
+      SELECT a.*, db.created_by 
+      FROM analisis a
+      JOIN data_balita db ON a.data_id = db.id
+      WHERE a.id = $1
+    `, [id]);
+
+    if (checkRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data analisis tidak ditemukan'
       });
     }
+
+    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Ini bukan data analisis balita Anda.'
+      });
+    }
+
+    const result = await pool.query('DELETE FROM analisis WHERE id = $1 RETURNING *', [id]);
 
     res.status(200).json({
       success: true,

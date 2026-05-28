@@ -59,6 +59,14 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - **Refaktor Controller Analisis**: Memperbarui controller analisis (`createAnalisis` dan `updateAnalisis`) agar dapat menyimpan dan mengembalikan data detail baru dari database.
 - **Join Query Riwayat Balita**: Memperbarui fungsi `getAllDataBalita` menggunakan query `LEFT JOIN` ke tabel `analisis` agar data status analisis langsung tersaji saat mengambil riwayat balita.
 
+### 28 Mei 2026
+
+- **Sistem Autentikasi JWT**: Mengimplementasikan sistem registrasi (menggunakan `bcryptjs` untuk hashing password) dan login dengan penerbitan JWT token (`jsonwebtoken`) terenkripsi di rute `/api/auth`.
+- **Middleware Keamanan Backend**: Membuat `authMiddleware.js` untuk melindungi seluruh endpoint `/api/data-balita` dan `/api/analisis`.
+- **Role-Based Access Control (RBAC)**: Mengimplementasikan filter NIK (`created_by`) di controller balita dan analisis. Akun dengan peran `user` hanya dapat mengakses dan mengelola data miliknya sendiri, sementara akun `admin` (seperti akun default `admin` / `admin123`) memiliki akses global untuk melihat seluruh data posyandu di sistem.
+- **Skrip Seeding Database**: Membuat skrip `seed-admin.js` untuk menginisialisasi akun admin dengan password ter-hash secara otomatis ke database PostgreSQL.
+- **Pembersihan Codebase**: Melakukan audit dan pembersihan berkas-berkas sisa/sia-sia pada frontend (`authService.js`, `Home.jsx`, dan `NotFound.jsx`) agar proyek lebih tertata dan optimal.
+
 ---
 
 ## Tools

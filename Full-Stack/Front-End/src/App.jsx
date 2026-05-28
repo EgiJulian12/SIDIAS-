@@ -5,6 +5,7 @@ import Diagnosis from "./pages/Diagnosis";
 import History from "./pages/History";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ProtectedRoute from "./components/layout/ProtectedRoute";
 
 function App() {
   return (
@@ -20,23 +21,34 @@ function App() {
         {/* Pages */}
         <Route
           path="/dashboard"
-          element={<Dashboard />}
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/diagnosis"
-          element={<Diagnosis />}
+          element={
+            <ProtectedRoute>
+              <Diagnosis />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/history"
-          element={<History />}
+          element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          }
         />
 
         <Route 
         path="/login" 
         element={<Login />} />
-
 
         <Route 
         path="/signup" 

@@ -1,8 +1,12 @@
-import MainLayout from "../components/layouts/MainLayout";
+import MainLayout from "../components/layout/MainLayout";
 
 import { motion } from "framer-motion";
 
 import { useEffect, useState } from "react";
+
+import toast, { Toaster } from "react-hot-toast";
+
+import api from "../services/api";
 
 import {
   FaSearch,
@@ -16,16 +20,26 @@ import {
 const History = () => {
   const [historyData, setHistoryData] = useState([]);
   const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Ambil data dari localStorage
+  // Ambil data dari backend API
   useEffect(() => {
-    const storedData =
-      JSON.parse(localStorage.getItem("historyData")) || [];
+    const fetchHistory = async () => {
+      try {
+        const response = await api.get("/analisis");
+        setHistoryData(response.data.data);
+      } catch (error) {
+        console.error(error);
+        toast.error("Gagal mengambil data riwayat");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setHistoryData(storedData);
+    fetchHistory();
   }, []);
 
-  // Filter Search
+  // Filter Search berdasarkan nama anak
   const filteredData = historyData.filter((item) =>
     item.nama.toLowerCase().includes(search.toLowerCase())
   );
@@ -65,8 +79,13 @@ const History = () => {
           </div>
         </div>
 
-        {/* Data Exists */}
-        {filteredData.length > 0 ? (
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mx-auto"></div>
+            <p className="text-slate-500 mt-4">Memuat data riwayat...</p>
+          </div>
+        ) : filteredData.length > 0 ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
             {filteredData.map((item, index) => (
@@ -84,9 +103,9 @@ const History = () => {
                   <div className="flex items-center gap-4">
 
                     {/* Image */}
-                    {item.image ? (
+                    {item.foto_url ? (
                       <img
-                        src={item.image}
+                        src={`http://localhost:5000${item.foto_url}`}
                         alt={item.nama}
                         className="w-16 h-16 rounded-3xl object-cover shadow-lg"
                       />
@@ -115,12 +134,12 @@ const History = () => {
                 {/* Status */}
                 <div
                   className={`mt-6 inline-flex items-center px-4 py-2 rounded-full font-semibold text-sm ${
-                    item.status === "Tidak Stunting"
+                    item.status_stunting === "Tidak Stunting"
                       ? "bg-emerald-100 text-emerald-700"
                       : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {item.status}
+                  {item.status_stunting}
                 </div>
 
                 {/* Grid Info */}
@@ -136,7 +155,7 @@ const History = () => {
                     </div>
 
                     <h3 className="text-xl font-bold text-slate-800">
-                      {item.umur}
+                      {item.umur_bulan} Bulan
                     </h3>
                   </div>
 
@@ -150,7 +169,7 @@ const History = () => {
                     </div>
 
                     <h3 className="text-xl font-bold text-slate-800">
-                      {item.berat}
+                      {item.berat_badan} Kg
                     </h3>
                   </div>
 
@@ -164,7 +183,7 @@ const History = () => {
                     </div>
 
                     <h3 className="text-xl font-bold text-slate-800">
-                      {item.tinggi}
+                      {item.tinggi_badan} Cm
                     </h3>
                   </div>
 
@@ -173,12 +192,12 @@ const History = () => {
                     <div className="flex items-center gap-2 text-slate-500 mb-2">
                       <FaChartLine />
                       <span className="text-sm">
-                        Tanggal
+                        Tanggal Analisis
                       </span>
                     </div>
 
                     <h3 className="text-base font-bold text-slate-800">
-                      {item.tanggal}
+                      {new Date(item.analyzed_at).toLocaleDateString("id-ID")}
                     </h3>
                   </div>
                 </div>
@@ -190,7 +209,7 @@ const History = () => {
                   </h3>
 
                   <p className="text-slate-600 leading-relaxed">
-                    {item.prediction}
+                    {item.tingkat_risiko_detail}
                   </p>
                 </div>
 
@@ -201,7 +220,7 @@ const History = () => {
                   </h3>
 
                   <p className="text-slate-600 leading-relaxed">
-                    {item.recommendation}
+                    {item.rekomendasi}
                   </p>
                 </div>
               </motion.div>

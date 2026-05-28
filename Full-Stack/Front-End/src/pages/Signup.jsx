@@ -6,11 +6,12 @@ import { Link, useNavigate } from "react-router-dom";
 
 import toast, { Toaster } from "react-hot-toast";
 
+import api from "../services/api";
+
 import {
   FaHeartbeat,
-  FaEnvelope,
-  FaLock,
   FaUser,
+  FaLock,
   FaArrowRight,
 } from "react-icons/fa";
 
@@ -18,9 +19,9 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    nik: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleChange = (e) => {
@@ -30,28 +31,40 @@ const Signup = () => {
     });
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
     if (
-      !formData.name ||
-      !formData.email ||
-      !formData.password
+      !formData.nik ||
+      !formData.password ||
+      !formData.confirmPassword
     ) {
       return toast.error("Semua field wajib diisi");
     }
 
-    // SIMPAN USER
-    localStorage.setItem(
-      "sidias_user",
-      JSON.stringify(formData)
-    );
+    if (formData.nik.length < 16) {
+      return toast.error("NIK harus minimal 16 digit");
+    }
 
-    toast.success("Akun berhasil dibuat");
+    if (formData.password !== formData.confirmPassword) {
+      return toast.error("Password dan konfirmasi password tidak cocok");
+    }
 
-    setTimeout(() => {
-      navigate("/login");
-    }, 1500);
+    try {
+      await api.post("/auth/register", {
+        nik: formData.nik,
+        password: formData.password,
+      });
+
+      toast.success("Akun berhasil dibuat. Silakan login.");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } catch (error) {
+      const message = error.response?.data?.message || "Registrasi gagal";
+      toast.error(message);
+    }
   };
 
   return (
@@ -85,11 +98,11 @@ const Signup = () => {
           {/* FORM */}
           <form onSubmit={handleSignup} className="space-y-5">
 
-            {/* NAMA */}
+            {/* NIK */}
             <div>
 
               <label className="text-slate-700 font-semibold block mb-2">
-                Nama
+                NIK (16 Digit)
               </label>
 
               <div className="relative">
@@ -98,32 +111,11 @@ const Signup = () => {
 
                 <input
                   type="text"
-                  name="name"
-                  placeholder="Masukkan nama"
-                  value={formData.name}
+                  name="nik"
+                  placeholder="Masukkan NIK Anda"
+                  value={formData.nik}
                   onChange={handleChange}
-                  className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
-                />
-              </div>
-            </div>
-
-            {/* EMAIL */}
-            <div>
-
-              <label className="text-slate-700 font-semibold block mb-2">
-                Email
-              </label>
-
-              <div className="relative">
-
-                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Masukkan email"
-                  value={formData.email}
-                  onChange={handleChange}
+                  maxLength={16}
                   className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
@@ -145,6 +137,28 @@ const Signup = () => {
                   name="password"
                   placeholder="Masukkan password"
                   value={formData.password}
+                  onChange={handleChange}
+                  className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
+                />
+              </div>
+            </div>
+
+            {/* CONFIRM PASSWORD */}
+            <div>
+
+              <label className="text-slate-700 font-semibold block mb-2">
+                Konfirmasi Password
+              </label>
+
+              <div className="relative">
+
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Ulangi password"
+                  value={formData.confirmPassword}
                   onChange={handleChange}
                   className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
                 />

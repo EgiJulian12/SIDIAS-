@@ -1,4 +1,4 @@
-import MainLayout from "../components/layouts/MainLayout";
+import MainLayout from "../components/layout/MainLayout";
 import Footer from "../components/ui/Footer";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -17,9 +17,6 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const isLogin = localStorage.getItem("sidias_login");
-  navigate("/login");
-  navigate("/diagnosis");
 
   const informationData = [
     {

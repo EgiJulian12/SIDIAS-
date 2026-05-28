@@ -7,8 +7,12 @@ import {
   deleteDataBalita
 } from '../controllers/dataBalitaController.js';
 import upload from '../middleware/upload.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Semua rute di bawah membutuhkan autentikasi
+router.use(authMiddleware);
 
 // Rute untuk mengambil semua data dan menambah data balita
 router.route('/')

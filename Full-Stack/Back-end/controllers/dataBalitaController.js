@@ -9,25 +9,46 @@ const calculateUmurBulan = (tanggal_lahir) => {
   return (yearsDifference * 12) + monthsDifference;
 };
 
-// Mengambil semua data balita
+// Mengambil semua data balita (Admin mendapat semua, User hanya yang ia buat)
 export const getAllDataBalita = async (req, res, next) => {
   try {
-    const result = await pool.query(`
-      SELECT db.*, 
-             a.id as analisis_id,
-             a.status_stunting,
-             a.status_detail,
-             a.tingkat_risiko,
-             a.tingkat_risiko_detail,
-             a.indikator,
-             a.indikator_detail,
-             a.z_score,
-             a.rekomendasi,
-             a.rekomendasi_detail
-      FROM data_balita db
-      LEFT JOIN analisis a ON db.id = a.data_id
-      ORDER BY db.created_at DESC
-    `);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query(`
+        SELECT db.*, 
+               a.id as analisis_id,
+               a.status_stunting,
+               a.status_detail,
+               a.tingkat_risiko,
+               a.tingkat_risiko_detail,
+               a.indikator,
+               a.indikator_detail,
+               a.z_score,
+               a.rekomendasi,
+               a.rekomendasi_detail
+        FROM data_balita db
+        LEFT JOIN analisis a ON db.id = a.data_id
+        ORDER BY db.created_at DESC
+      `);
+    } else {
+      result = await pool.query(`
+        SELECT db.*, 
+               a.id as analisis_id,
+               a.status_stunting,
+               a.status_detail,
+               a.tingkat_risiko,
+               a.tingkat_risiko_detail,
+               a.indikator,
+               a.indikator_detail,
+               a.z_score,
+               a.rekomendasi,
+               a.rekomendasi_detail
+        FROM data_balita db
+        LEFT JOIN analisis a ON db.id = a.data_id
+        WHERE db.created_by = $1
+        ORDER BY db.created_at DESC
+      `, [req.user.nik]);
+    }
     res.status(200).json({
       success: true,
       count: result.rowCount,
@@ -42,12 +63,17 @@ export const getAllDataBalita = async (req, res, next) => {
 export const getDataBalitaById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM data_balita WHERE id = $1', [id]);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('SELECT * FROM data_balita WHERE id = $1', [id]);
+    } else {
+      result = await pool.query('SELECT * FROM data_balita WHERE id = $1 AND created_by = $2', [id, req.user.nik]);
+    }
 
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data balita tidak ditemukan'
+        message: 'Data balita tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
@@ -69,8 +95,7 @@ export const createDataBalita = async (req, res, next) => {
       tanggal_lahir, 
       berat_badan, 
       tinggi_badan, 
-      umur_bulan, 
-      created_by 
+      umur_bulan
     } = req.body;
 
     const foto_url = req.file ? `/uploads/${req.file.filename}` : null;
@@ -102,7 +127,7 @@ export const createDataBalita = async (req, res, next) => {
         tinggi_badan || null, 
         calculatedUmur, 
         foto_url || null, 
-        created_by || null // Mungkin belum ada user saat testing
+        req.user.nik // Gunakan NIK dari user yang login
       ]
     );
 
@@ -148,6 +173,14 @@ export const updateDataBalita = async (req, res, next) => {
 
     const currentData = currentDataRes.rows[0];
 
+    // Cek kepemilikan
+    if (req.user.role !== 'admin' && currentData.created_by !== req.user.nik) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Ini bukan data balita Anda.'
+      });
+    }
+
     let updatedUmur = currentData.umur_bulan;
     if (umur_bulan !== undefined) {
       updatedUmur = umur_bulan;
@@ -191,14 +224,24 @@ export const updateDataBalita = async (req, res, next) => {
 export const deleteDataBalita = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM data_balita WHERE id = $1 RETURNING *', [id]);
 
-    if (result.rowCount === 0) {
+    // Periksa kepemilikan dulu
+    const checkRes = await pool.query('SELECT * FROM data_balita WHERE id = $1', [id]);
+    if (checkRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data balita tidak ditemukan'
       });
     }
+
+    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Ini bukan data balita Anda.'
+      });
+    }
+
+    const result = await pool.query('DELETE FROM data_balita WHERE id = $1 RETURNING *', [id]);
 
     res.status(200).json({
       success: true,
