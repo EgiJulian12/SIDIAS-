@@ -67,6 +67,13 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - **Skrip Seeding Database**: Membuat skrip `seed-admin.js` untuk menginisialisasi akun admin dengan password ter-hash secara otomatis ke database PostgreSQL.
 - **Pembersihan Codebase**: Melakukan audit dan pembersihan berkas-berkas sisa/sia-sia pada frontend (`authService.js`, `Home.jsx`, dan `NotFound.jsx`) agar proyek lebih tertata dan optimal.
 
+### 29 Mei 2026
+
+- **Integrasi AI Random Forest**: Mengintegrasikan model prediksi stunting berbasis Random Forest (`predict.py`) ke dalam alur `createAnalisis`. Backend menjalankan skrip Python via `child_process.exec` secara otomatis saat data balita baru dianalisis, menghasilkan status stunting, tingkat risiko, indikator, z-score, dan rekomendasi.
+- **Otorisasi Hapus Berbasis Kepemilikan (Ownership-Based Delete)**: Memperbarui logika `deleteAnalisis` dan `deleteDataBalita` dengan validasi kepemilikan yang lebih robust — menggunakan konversi eksplisit `String().trim()` pada perbandingan NIK untuk mencegah ketidakcocokan tipe data antara database dan JWT payload.
+- **Penghapusan Fitur Hapus di Frontend**: Menghapus seluruh UI fitur hapus (tombol 3 titik, dropdown menu, dan handler `handleDelete`) dari halaman `History.jsx` atas permintaan pengguna. Endpoint `DELETE /api/analisis/:id` tetap tersedia di backend untuk keperluan API.
+- **Hasil TDD**: Seluruh 17 test case (2 test suites: `analisis.test.js` dan `dataBalita.test.js`) berhasil lulus 100%.
+
 ---
 
 ## Tools

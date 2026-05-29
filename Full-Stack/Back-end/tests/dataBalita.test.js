@@ -3,6 +3,10 @@ import app from '../app.js';
 import { pool } from '../config/db.js';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken';
+
+const token = jwt.sign({ nik: 'admin', role: 'admin' }, process.env.JWT_SECRET || 'supersecretkey123');
+const authHeader = `Bearer ${token}`;
 
 describe('Data Balita API Endpoints (Integration Testing)', () => {
   let createdBalitaId;
@@ -27,8 +31,8 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
     
     // Masukkan data awal (seed)
     const res = await pool.query(`
-      INSERT INTO data_balita (nama, jenis_kelamin, tanggal_lahir, berat_badan, tinggi_badan, umur_bulan, foto_url)
-      VALUES ('Budi', 'L', '2023-01-01', 10.5, 80, 16, 'http://example.com/budi.jpg')
+      INSERT INTO data_balita (nama, jenis_kelamin, tanggal_lahir, berat_badan, tinggi_badan, umur_bulan)
+      VALUES ('Budi', 'L', '2023-01-01', 10.5, 80, 16)
       RETURNING id
     `);
     createdBalitaId = res.rows[0].id;
@@ -40,7 +44,9 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
 
   describe('GET /api/data-balita', () => {
     it('should return all data balita', async () => {
-      const res = await request(app).get('/api/data-balita');
+      const res = await request(app)
+        .get('/api/data-balita')
+        .set('Authorization', authHeader);
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.count).toBe(1);
@@ -50,7 +56,9 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
 
   describe('GET /api/data-balita/:id', () => {
     it('should return a specific data balita by ID', async () => {
-      const res = await request(app).get(`/api/data-balita/${createdBalitaId}`);
+      const res = await request(app)
+        .get(`/api/data-balita/${createdBalitaId}`)
+        .set('Authorization', authHeader);
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.nama).toBe('Budi');
@@ -59,7 +67,9 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
     it('should return 404 if data not found', async () => {
       // Hasilkan UUID acak yang tidak ada di database
       const randomUUID = '123e4567-e89b-12d3-a456-426614174000';
-      const res = await request(app).get(`/api/data-balita/${randomUUID}`);
+      const res = await request(app)
+        .get(`/api/data-balita/${randomUUID}`)
+        .set('Authorization', authHeader);
       expect(res.statusCode).toBe(404);
       expect(res.body.success).toBe(false);
     });
@@ -77,6 +87,7 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
       
       const res = await request(app)
         .post('/api/data-balita')
+        .set('Authorization', authHeader)
         .send(newData);
 
       expect(res.statusCode).toBe(201);
@@ -89,6 +100,7 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
     it('should return 400 if required fields are missing', async () => {
       const res = await request(app)
         .post('/api/data-balita')
+        .set('Authorization', authHeader)
         .send({ nama: 'Siti' }); // Kekurangan jenis_kelamin, tanggal_lahir
 
       expect(res.statusCode).toBe(400);
@@ -97,6 +109,7 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
     it('should return 400 if jenis_kelamin is invalid', async () => {
       const res = await request(app)
         .post('/api/data-balita')
+        .set('Authorization', authHeader)
         .send({ 
           nama: 'Siti', 
           jenis_kelamin: 'X', 
@@ -111,6 +124,7 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
     it('should update an existing data balita', async () => {
       const res = await request(app)
         .put(`/api/data-balita/${createdBalitaId}`)
+        .set('Authorization', authHeader)
         .send({ berat_badan: 11.0 });
 
       expect(res.statusCode).toBe(200);
@@ -121,7 +135,9 @@ describe('Data Balita API Endpoints (Integration Testing)', () => {
 
   describe('DELETE /api/data-balita/:id', () => {
     it('should delete a data balita', async () => {
-      const res = await request(app).delete(`/api/data-balita/${createdBalitaId}`);
+      const res = await request(app)
+        .delete(`/api/data-balita/${createdBalitaId}`)
+        .set('Authorization', authHeader);
       expect(res.statusCode).toBe(200);
       
       // Verifikasi penghapusan
