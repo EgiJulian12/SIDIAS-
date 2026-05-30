@@ -1,4 +1,38 @@
 import { pool } from '../config/db.js';
+import { exec } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper function to run the Python AI script
+const runAIPrediction = (umur_bulan, jenis_kelamin, tinggi_badan, berat_badan) => {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, '../AI/predict.py');
+    const command = `python "${scriptPath}" ${umur_bulan} "${jenis_kelamin}" ${tinggi_badan} ${berat_badan}`;
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        return reject(new Error(`AI execution error: ${error.message || stderr}`));
+      }
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.error) {
+          return reject(new Error(result.error));
+        }
+        resolve(result);
+      } catch (e) {
+        reject(new Error(`Gagal memparsing output AI: ${stdout}`));
+      }
+    });
+  });
+};
+
+// ... existing code ... (but we are replacing from line 1 onwards up to line 188)
+// Wait, we need to output the rest of the functions from line 1 to 188 in this replacement block.
+// Let's do that.
+// Let's keep the get/all methods as they were.
 
 // Mengambil semua data analisis (Admin mendapat semua, User hanya yang ia buat)
 export const getAllAnalisis = async (req, res, next) => {
@@ -115,35 +149,24 @@ export const getAnalisisByDataId = async (req, res, next) => {
 // Menambahkan data analisis baru
 export const createAnalisis = async (req, res, next) => {
   try {
-    const { 
-      data_id, 
-      status_stunting, 
-      status_detail,
-      tingkat_risiko, 
-      tingkat_risiko_detail,
-      indikator, 
-      indikator_detail,
-      z_score, 
-      rekomendasi,
-      rekomendasi_detail
-    } = req.body;
+    const { data_id } = req.body;
 
-    if (!data_id || !status_stunting || z_score === undefined) {
+    if (!data_id) {
       return res.status(400).json({
         success: false,
-        message: 'Field data_id, status_stunting, dan z_score wajib diisi'
+        message: 'Field data_id wajib diisi'
       });
     }
 
     // Memastikan data balita ada dan milik user (jika bukan admin)
-    let balitaExists;
+    let balitaRes;
     if (req.user.role === 'admin') {
-      balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1', [data_id]);
+      balitaRes = await pool.query('SELECT * FROM data_balita WHERE id = $1', [data_id]);
     } else {
-      balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1 AND created_by = $2', [data_id, req.user.nik]);
+      balitaRes = await pool.query('SELECT * FROM data_balita WHERE id = $1 AND created_by = $2', [data_id, req.user.nik]);
     }
 
-    if (balitaExists.rowCount === 0) {
+    if (balitaRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data balita tidak ditemukan atau Anda tidak memiliki akses'
@@ -158,6 +181,32 @@ export const createAnalisis = async (req, res, next) => {
         message: 'Analisis untuk data balita ini sudah ada'
       });
     }
+
+    const balita = balitaRes.rows[0];
+    const { umur_bulan, jenis_kelamin, tinggi_badan, berat_badan } = balita;
+
+    // Jalankan kalkulasi model AI Random Forest
+    let aiResult;
+    try {
+      aiResult = await runAIPrediction(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan);
+    } catch (aiError) {
+      return res.status(500).json({
+        success: false,
+        message: `Gagal menjalankan prediksi AI: ${aiError.message}`
+      });
+    }
+
+    const {
+      status_stunting,
+      status_detail,
+      tingkat_risiko,
+      tingkat_risiko_detail,
+      indikator,
+      indikator_detail,
+      z_score,
+      rekomendasi,
+      rekomendasi_detail
+    } = aiResult;
 
     const result = await pool.query(
       `INSERT INTO analisis (data_id, status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail, indikator, indikator_detail, z_score, rekomendasi, rekomendasi_detail) 
@@ -178,7 +227,7 @@ export const createAnalisis = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Data analisis berhasil ditambahkan',
+      message: 'Data analisis berhasil ditambahkan menggunakan AI',
       data: result.rows[0]
     });
   } catch (error) {
@@ -267,7 +316,7 @@ export const deleteAnalisis = async (req, res, next) => {
 
     // Cek kepemilikan
     const checkRes = await pool.query(`
-      SELECT a.*, db.created_by 
+      SELECT a.id, db.created_by 
       FROM analisis a
       JOIN data_balita db ON a.data_id = db.id
       WHERE a.id = $1
@@ -280,10 +329,15 @@ export const deleteAnalisis = async (req, res, next) => {
       });
     }
 
-    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+    const ownerNik = checkRes.rows[0].created_by ? String(checkRes.rows[0].created_by).trim() : null;
+    const userNik = req.user.nik ? String(req.user.nik).trim() : null;
+
+    console.log(`[DeleteAnalisis] ID: ${id}, Role: ${req.user.role}, Owner NIK: '${ownerNik}', User NIK: '${userNik}'`);
+
+    if (req.user.role !== 'admin' && ownerNik !== userNik) {
       return res.status(403).json({
         success: false,
-        message: 'Akses ditolak. Ini bukan data analisis balita Anda.'
+        message: `Akses ditolak. Ini bukan data analisis balita Anda. (Owner: ${ownerNik}, Anda: ${userNik})`
       });
     }
 

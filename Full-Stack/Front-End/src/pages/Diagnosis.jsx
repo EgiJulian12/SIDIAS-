@@ -33,12 +33,15 @@ const dataURLtoFile = (dataurl, filename) => {
   return new File([u8arr], filename, {type:mime});
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const Diagnosis = () => {
   const [preview, setPreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [result, setResult] = useState(null);
   const [openCamera, setOpenCamera] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
 
   const webcamRef = useRef(null);
 
@@ -94,6 +97,7 @@ const Diagnosis = () => {
     }
 
     setIsLoading(true);
+    setLoadingStep("Menyimpan data balita...");
     const calculatedUmur = calculateAgeInMonths(data.tanggal_lahir);
 
     try {
@@ -114,51 +118,26 @@ const Diagnosis = () => {
       });
 
       const balitaId = resBalita.data.data.id;
+      
+      await sleep(1000);
+      setLoadingStep("Menganalisis dengan AI Random Forest...");
 
-      // 2. Lakukan perhitungan stunting
-      const tinggiMeter = data.tinggi / 100;
-      const bmi = data.berat / (tinggiMeter * tinggiMeter);
-
-      let status = "";
-      let prediction = "";
-      let recommendation = "";
-      let tingkatRisiko = "";
-
-      if (bmi < 14) {
-        status = "Terindikasi Stunting";
-        tingkatRisiko = "Tinggi";
-        prediction =
-          "Anak memiliki risiko mengalami stunting apabila pertumbuhan tidak dipantau dan kebutuhan gizi tidak terpenuhi.";
-        recommendation =
-          "Tingkatkan konsumsi protein, susu, vitamin, makanan bergizi seimbang, dan lakukan pemeriksaan rutin ke posyandu.";
-      } else {
-        status = "Tidak Stunting";
-        tingkatRisiko = "Rendah";
-        prediction =
-          "Pertumbuhan anak saat ini tergolong baik dan stabil berdasarkan data yang dimasukkan.";
-        recommendation =
-          "Pertahankan pola makan sehat, aktivitas fisik, nutrisi seimbang, dan pemeriksaan rutin setiap bulan.";
-      }
-
-      // 3. Simpan analisis ke tabel analisis
-      await api.post("/analisis", {
-        data_id: balitaId,
-        status_stunting: status,
-        status_detail: status,
-        tingkat_risiko: tingkatRisiko,
-        tingkat_risiko_detail: prediction,
-        indikator: "BMI untuk Umur",
-        indikator_detail: `BMI Anak: ${bmi.toFixed(2)}`,
-        z_score: bmi.toFixed(2),
-        rekomendasi: recommendation,
-        rekomendasi_detail: recommendation,
+      // 2. Simpan analisis ke tabel analisis (Backend akan menjalankan model AI otomatis)
+      const resAnalisis = await api.post("/analisis", {
+        data_id: balitaId
       });
 
-      // 4. Tampilkan hasil
+      const analisisData = resAnalisis.data.data;
+
+      await sleep(1000);
+      setLoadingStep("Menyimpan hasil analisis...");
+      await sleep(800);
+
+      // 3. Tampilkan hasil
       setResult({
-        status,
-        prediction,
-        recommendation,
+        status: analisisData.status_stunting,
+        prediction: analisisData.tingkat_risiko_detail,
+        recommendation: analisisData.rekomendasi,
       });
 
       toast.success("Analisis berhasil disimpan ke database");
@@ -171,6 +150,7 @@ const Diagnosis = () => {
       toast.error(msg);
     } finally {
       setIsLoading(false);
+      setLoadingStep("");
     }
   };
 
@@ -479,13 +459,38 @@ const Diagnosis = () => {
             )}
 
             {/* Submit */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-5 rounded-3xl text-lg font-semibold shadow-xl hover:scale-[1.01] transition-all disabled:opacity-55"
-            >
-              {isLoading ? "Sedang Menyimpan..." : "Simpan & Analisis Data Anak"}
-            </button>
+            <div className="space-y-4">
+              {isLoading && (
+                <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden relative">
+                  <div 
+                    className="bg-gradient-to-r from-teal-400 to-cyan-500 h-full transition-all duration-500" 
+                    style={{ 
+                      width: 
+                        loadingStep.includes("Menyimpan data balita") ? "33%" :
+                        loadingStep.includes("AI") ? "66%" : "100%" 
+                    }}
+                  />
+                </div>
+              )}
+              
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-white py-5 rounded-3xl text-lg font-semibold shadow-xl hover:scale-[1.01] transition-all disabled:opacity-55 flex items-center justify-center gap-3"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{loadingStep}</span>
+                  </>
+                ) : (
+                  "Simpan & Analisis Data Anak"
+                )}
+              </button>
+            </div>
           </form>
         </motion.div>
       </div>

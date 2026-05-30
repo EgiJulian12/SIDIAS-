@@ -234,10 +234,15 @@ export const deleteDataBalita = async (req, res, next) => {
       });
     }
 
-    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+    const ownerNik = checkRes.rows[0].created_by ? String(checkRes.rows[0].created_by).trim() : null;
+    const userNik = req.user.nik ? String(req.user.nik).trim() : null;
+
+    console.log(`[DeleteDataBalita] ID: ${id}, Role: ${req.user.role}, Owner NIK: '${ownerNik}', User NIK: '${userNik}'`);
+
+    if (req.user.role !== 'admin' && ownerNik !== userNik) {
       return res.status(403).json({
         success: false,
-        message: 'Akses ditolak. Ini bukan data balita Anda.'
+        message: `Akses ditolak. Ini bukan data balita Anda. (Owner: ${ownerNik}, Anda: ${userNik})`
       });
     }
 

@@ -13,7 +13,6 @@ import {
   FaCalendarAlt,
   FaWeight,
   FaRulerVertical,
-  FaEllipsisH,
   FaChartLine,
 } from "react-icons/fa";
 
@@ -126,9 +125,7 @@ const History = () => {
                     </div>
                   </div>
 
-                  <button className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-teal-50 transition-all flex items-center justify-center text-slate-500">
-                    <FaEllipsisH />
-                  </button>
+
                 </div>
 
                 {/* Status */}
