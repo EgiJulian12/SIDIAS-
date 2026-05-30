@@ -1,20 +1,21 @@
-// src/services/api.js — BASE INSTANCE (jangan diubah-ubah)
-
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: 'http://localhost:5000/api',
 });
 
-// Otomatis sisipkan token di setiap request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Interceptor untuk menyisipkan token JWT secara otomatis
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('sidias_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export default api;

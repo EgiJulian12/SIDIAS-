@@ -1,9 +1,75 @@
 import { pool } from '../config/db.js';
+import { exec } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Mengambil semua data analisis
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper function to run the Python AI script
+const runAIPrediction = (umur_bulan, jenis_kelamin, tinggi_badan, berat_badan) => {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, '../AI/predict.py');
+    const command = `python "${scriptPath}" ${umur_bulan} "${jenis_kelamin}" ${tinggi_badan} ${berat_badan}`;
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        return reject(new Error(`AI execution error: ${error.message || stderr}`));
+      }
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.error) {
+          return reject(new Error(result.error));
+        }
+        resolve(result);
+      } catch (e) {
+        reject(new Error(`Gagal memparsing output AI: ${stdout}`));
+      }
+    });
+  });
+};
+
+// ... existing code ... (but we are replacing from line 1 onwards up to line 188)
+// Wait, we need to output the rest of the functions from line 1 to 188 in this replacement block.
+// Let's do that.
+// Let's keep the get/all methods as they were.
+
+// Mengambil semua data analisis (Admin mendapat semua, User hanya yang ia buat)
 export const getAllAnalisis = async (req, res, next) => {
   try {
-    const result = await pool.query('SELECT * FROM analisis ORDER BY analyzed_at DESC');
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query(`
+        SELECT a.*, 
+               db.nama, 
+               db.jenis_kelamin, 
+               db.tanggal_lahir, 
+               db.berat_badan, 
+               db.tinggi_badan, 
+               db.umur_bulan, 
+               db.foto_url, 
+               db.created_by
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        ORDER BY a.analyzed_at DESC
+      `);
+    } else {
+      result = await pool.query(`
+        SELECT a.*, 
+               db.nama, 
+               db.jenis_kelamin, 
+               db.tanggal_lahir, 
+               db.berat_badan, 
+               db.tinggi_badan, 
+               db.umur_bulan, 
+               db.foto_url, 
+               db.created_by
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE db.created_by = $1
+        ORDER BY a.analyzed_at DESC
+      `, [req.user.nik]);
+    }
     res.status(200).json({
       success: true,
       count: result.rowCount,
@@ -18,12 +84,22 @@ export const getAllAnalisis = async (req, res, next) => {
 export const getAnalisisById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    } else {
+      result = await pool.query(`
+        SELECT a.* 
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE a.id = $1 AND db.created_by = $2
+      `, [id, req.user.nik]);
+    }
 
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data analisis tidak ditemukan'
+        message: 'Data analisis tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
@@ -40,17 +116,27 @@ export const getAnalisisById = async (req, res, next) => {
 export const getAnalisisByDataId = async (req, res, next) => {
   try {
     const { data_id } = req.params;
-    const result = await pool.query('SELECT * FROM analisis WHERE data_id = $1 ORDER BY analyzed_at DESC', [data_id]);
+    let result;
+    if (req.user.role === 'admin') {
+      result = await pool.query('SELECT * FROM analisis WHERE data_id = $1 ORDER BY analyzed_at DESC', [data_id]);
+    } else {
+      result = await pool.query(`
+        SELECT a.* 
+        FROM analisis a
+        JOIN data_balita db ON a.data_id = db.id
+        WHERE a.data_id = $1 AND db.created_by = $2 
+        ORDER BY a.analyzed_at DESC
+      `, [data_id, req.user.nik]);
+    }
 
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data analisis untuk balita ini tidak ditemukan'
+        message: 'Data analisis untuk balita ini tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
     // Biasanya kita mengembalikan data yang paling baru
-    // Implementasi sebelumnya menggunakan .find() yang mengembalikan kecocokan pertama.
     res.status(200).json({
       success: true,
       data: result.rows[0]
@@ -63,28 +149,27 @@ export const getAnalisisByDataId = async (req, res, next) => {
 // Menambahkan data analisis baru
 export const createAnalisis = async (req, res, next) => {
   try {
-    const { 
-      data_id, 
-      status_stunting, 
-      tingkat_risiko, 
-      indikator, 
-      z_score, 
-      rekomendasi 
-    } = req.body;
+    const { data_id } = req.body;
 
-    if (!data_id || !status_stunting || z_score === undefined) {
+    if (!data_id) {
       return res.status(400).json({
         success: false,
-        message: 'Field data_id, status_stunting, dan z_score wajib diisi'
+        message: 'Field data_id wajib diisi'
       });
     }
 
-    // Memastikan data balita ada
-    const balitaExists = await pool.query('SELECT id FROM data_balita WHERE id = $1', [data_id]);
-    if (balitaExists.rowCount === 0) {
+    // Memastikan data balita ada dan milik user (jika bukan admin)
+    let balitaRes;
+    if (req.user.role === 'admin') {
+      balitaRes = await pool.query('SELECT * FROM data_balita WHERE id = $1', [data_id]);
+    } else {
+      balitaRes = await pool.query('SELECT * FROM data_balita WHERE id = $1 AND created_by = $2', [data_id, req.user.nik]);
+    }
+
+    if (balitaRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Data balita dengan data_id tersebut tidak ditemukan'
+        message: 'Data balita tidak ditemukan atau Anda tidak memiliki akses'
       });
     }
 
@@ -97,22 +182,52 @@ export const createAnalisis = async (req, res, next) => {
       });
     }
 
+    const balita = balitaRes.rows[0];
+    const { umur_bulan, jenis_kelamin, tinggi_badan, berat_badan } = balita;
+
+    // Jalankan kalkulasi model AI Random Forest
+    let aiResult;
+    try {
+      aiResult = await runAIPrediction(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan);
+    } catch (aiError) {
+      return res.status(500).json({
+        success: false,
+        message: `Gagal menjalankan prediksi AI: ${aiError.message}`
+      });
+    }
+
+    const {
+      status_stunting,
+      status_detail,
+      tingkat_risiko,
+      tingkat_risiko_detail,
+      indikator,
+      indikator_detail,
+      z_score,
+      rekomendasi,
+      rekomendasi_detail
+    } = aiResult;
+
     const result = await pool.query(
-      `INSERT INTO analisis (data_id, status_stunting, tingkat_risiko, indikator, z_score, rekomendasi) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      `INSERT INTO analisis (data_id, status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail, indikator, indikator_detail, z_score, rekomendasi, rekomendasi_detail) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         data_id, 
         status_stunting, 
+        status_detail || null,
         tingkat_risiko || null, 
+        tingkat_risiko_detail || null,
         indikator || null, 
+        indikator_detail || null,
         z_score, 
-        rekomendasi || null
+        rekomendasi || null,
+        rekomendasi_detail || null
       ]
     );
 
     res.status(201).json({
       success: true,
-      message: 'Data analisis berhasil ditambahkan',
+      message: 'Data analisis berhasil ditambahkan menggunakan AI',
       data: result.rows[0]
     });
   } catch (error) {
@@ -126,35 +241,60 @@ export const updateAnalisis = async (req, res, next) => {
     const { id } = req.params;
     const { 
       status_stunting, 
+      status_detail,
       tingkat_risiko, 
+      tingkat_risiko_detail,
       indikator, 
+      indikator_detail,
       z_score, 
-      rekomendasi 
+      rekomendasi,
+      rekomendasi_detail
     } = req.body;
 
-    const currentAnalisis = await pool.query('SELECT * FROM analisis WHERE id = $1', [id]);
+    // Cek kepemilikan
+    const checkRes = await pool.query(`
+      SELECT a.*, db.created_by 
+      FROM analisis a
+      JOIN data_balita db ON a.data_id = db.id
+      WHERE a.id = $1
+    `, [id]);
 
-    if (currentAnalisis.rowCount === 0) {
+    if (checkRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data analisis tidak ditemukan'
       });
     }
 
+    if (req.user.role !== 'admin' && checkRes.rows[0].created_by !== req.user.nik) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Ini bukan data analisis balita Anda.'
+      });
+    }
+
     const result = await pool.query(
       `UPDATE analisis 
        SET status_stunting = COALESCE($1, status_stunting),
-           tingkat_risiko = COALESCE($2, tingkat_risiko),
-           indikator = COALESCE($3, indikator),
-           z_score = COALESCE($4, z_score),
-           rekomendasi = COALESCE($5, rekomendasi)
-       WHERE id = $6 RETURNING *`,
+           status_detail = COALESCE($2, status_detail),
+           tingkat_risiko = COALESCE($3, tingkat_risiko),
+           tingkat_risiko_detail = COALESCE($4, tingkat_risiko_detail),
+           indikator = COALESCE($5, indikator),
+           indikator_detail = COALESCE($6, indikator_detail),
+           z_score = COALESCE($7, z_score),
+           rekomendasi = COALESCE($8, rekomendasi),
+           rekomendasi_detail = COALESCE($9, rekomendasi_detail)
+       WHERE id = $10 RETURNING *`,
       [
         status_stunting, 
+        status_detail,
         tingkat_risiko, 
+        tingkat_risiko_detail,
         indikator, 
+        indikator_detail,
         z_score, 
         rekomendasi, 
+        rekomendasi_detail,
         id
       ]
     );
@@ -173,14 +313,35 @@ export const updateAnalisis = async (req, res, next) => {
 export const deleteAnalisis = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('DELETE FROM analisis WHERE id = $1 RETURNING *', [id]);
 
-    if (result.rowCount === 0) {
+    // Cek kepemilikan
+    const checkRes = await pool.query(`
+      SELECT a.id, db.created_by 
+      FROM analisis a
+      JOIN data_balita db ON a.data_id = db.id
+      WHERE a.id = $1
+    `, [id]);
+
+    if (checkRes.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: 'Data analisis tidak ditemukan'
       });
     }
+
+    const ownerNik = checkRes.rows[0].created_by ? String(checkRes.rows[0].created_by).trim() : null;
+    const userNik = req.user.nik ? String(req.user.nik).trim() : null;
+
+    console.log(`[DeleteAnalisis] ID: ${id}, Role: ${req.user.role}, Owner NIK: '${ownerNik}', User NIK: '${userNik}'`);
+
+    if (req.user.role !== 'admin' && ownerNik !== userNik) {
+      return res.status(403).json({
+        success: false,
+        message: `Akses ditolak. Ini bukan data analisis balita Anda. (Owner: ${ownerNik}, Anda: ${userNik})`
+      });
+    }
+
+    const result = await pool.query('DELETE FROM analisis WHERE id = $1 RETURNING *', [id]);
 
     res.status(200).json({
       success: true,

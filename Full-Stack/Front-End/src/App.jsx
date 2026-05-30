@@ -1,30 +1,62 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import MainLayout from './components/layout/MainLayout';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Diagnosis from './pages/Diagnosis';
-import History from './pages/History';
-import NotFound from './pages/NotFound';
+import Dashboard from "./pages/Dashboard";
+import Diagnosis from "./pages/Diagnosis";
+import History from "./pages/History";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ProtectedRoute from "./components/layout/ProtectedRoute";
 
-const App = () => {
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Semua halaman yang pakai Navbar & Footer */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/diagnosis" element={<Diagnosis />} />
-          <Route path="/history" element={<History />} />
-        </Route>
 
-        {/* Halaman 404 */}
-        <Route path="*" element={<NotFound />} />
+        {/* Default Redirect */}
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" />}
+        />
+
+        {/* Pages */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/diagnosis"
+          element={
+            <ProtectedRoute>
+              <Diagnosis />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route 
+        path="/login" 
+        element={<Login />} />
+
+        <Route 
+        path="/signup" 
+        element={<Signup />} />
+
       </Routes>
     </BrowserRouter>
   );
-};
+}
 
 export default App;
