@@ -29,6 +29,29 @@ const runAIPrediction = (umur_bulan, jenis_kelamin, tinggi_badan, berat_badan) =
   });
 };
 
+// Helper function to run the MobileNetV2 image AI script
+const runImageAIPrediction = (fotoPath) => {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, '../AI/predict_mobilenet.py');
+    const command = `python "${scriptPath}" "${fotoPath}"`;
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        return reject(new Error(`AI execution error: ${error.message || stderr}`));
+      }
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.error) {
+          return reject(new Error(result.error));
+        }
+        resolve(result);
+      } catch (e) {
+        reject(new Error(`Gagal memparsing output AI: ${stdout}`));
+      }
+    });
+  });
+};
+
 // ... existing code ... (but we are replacing from line 1 onwards up to line 188)
 // Wait, we need to output the rest of the functions from line 1 to 188 in this replacement block.
 // Let's do that.
@@ -183,12 +206,85 @@ export const createAnalisis = async (req, res, next) => {
     }
 
     const balita = balitaRes.rows[0];
-    const { umur_bulan, jenis_kelamin, tinggi_badan, berat_badan } = balita;
+    const { umur_bulan, jenis_kelamin, tinggi_badan, berat_badan, foto_url } = balita;
 
-    // Jalankan kalkulasi model AI Random Forest
-    let aiResult;
+    // Jalankan prediksi model AI
+    // Jika foto_url tersedia, jalankan keduanya (Random Forest & MobileNetV2) secara paralel.
+    // Jika tidak ada foto, jalankan hanya Random Forest.
+    let status_stunting,
+        status_detail,
+        tingkat_risiko,
+        tingkat_risiko_detail,
+        indikator,
+        indikator_detail,
+        z_score,
+        rekomendasi,
+        rekomendasi_detail,
+        model_version;
+
     try {
-      aiResult = await runAIPrediction(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan);
+      if (foto_url) {
+        const cleanFotoUrl = foto_url.startsWith('/') ? foto_url.slice(1) : foto_url;
+        const fotoPath = path.join(__dirname, '..', cleanFotoUrl);
+
+        // Jalankan kedua AI secara paralel
+        const [rfResult, mnResult] = await Promise.all([
+          runAIPrediction(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan),
+          runImageAIPrediction(fotoPath)
+        ]);
+
+        // LOGIKA ENSEMBLE:
+        // 1. status_stunting utama diambil dari Random Forest (antropometri standar medis klinis WHO)
+        status_stunting = rfResult.status_stunting;
+        
+        // 2. status_detail menggabungkan keduanya
+        status_detail = `Fisik (WHO): ${rfResult.status_detail} | Visual (Foto): ${mnResult.status_detail}`;
+        
+        // 3. tingkat_risiko: ambil risiko tertinggi demi keselamatan diagnosa (Tinggi > Sedang > Rendah)
+        if (rfResult.tingkat_risiko === 'Tinggi' || mnResult.tingkat_risiko === 'Tinggi') {
+          tingkat_risiko = 'Tinggi';
+        } else if (mnResult.tingkat_risiko === 'Sedang' || rfResult.tingkat_risiko === 'Sedang') {
+          tingkat_risiko = 'Sedang';
+        } else {
+          tingkat_risiko = 'Rendah';
+        }
+
+        // 4. tingkat_risiko_detail menggabungkan penjelasan risiko keduanya
+        tingkat_risiko_detail = `Fisik: ${rfResult.tingkat_risiko_detail} | Visual: ${mnResult.tingkat_risiko_detail}`;
+        
+        // 5. indikator
+        indikator = 'WHO Antropometri + Visual (MobileNetV2)';
+        
+        // 6. indikator_detail
+        indikator_detail = `Fisik: ${rfResult.indikator_detail} | Visual: ${mnResult.indikator_detail}`;
+        
+        // 7. z_score diisi dari Random Forest (klinis)
+        z_score = rfResult.z_score;
+        
+        // 8. rekomendasi menggabungkan keduanya
+        rekomendasi = `Rekomendasi Klinis: ${rfResult.rekomendasi} Rekomendasi Visual: ${mnResult.rekomendasi}`;
+        
+        // 9. rekomendasi_detail menggabungkan keduanya
+        rekomendasi_detail = `Rekomendasi Klinis: ${rfResult.rekomendasi_detail} Rekomendasi Visual: ${mnResult.rekomendasi_detail}`;
+        
+        // 10. model_version
+        model_version = 'Ensemble (Random Forest + MobileNetV2)';
+
+      } else {
+        // Hanya jalankan Random Forest
+        const rfResult = await runAIPrediction(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan);
+        
+        status_stunting = rfResult.status_stunting;
+        status_detail = rfResult.status_detail;
+        tingkat_risiko = rfResult.tingkat_risiko;
+        tingkat_risiko_detail = rfResult.tingkat_risiko_detail;
+        indikator = rfResult.indikator;
+        indikator_detail = rfResult.indikator_detail;
+        z_score = rfResult.z_score;
+        rekomendasi = rfResult.rekomendasi;
+        rekomendasi_detail = rfResult.rekomendasi_detail;
+        model_version = 'Random Forest';
+      }
     } catch (aiError) {
       return res.status(500).json({
         success: false,
@@ -196,21 +292,17 @@ export const createAnalisis = async (req, res, next) => {
       });
     }
 
-    const {
-      status_stunting,
-      status_detail,
-      tingkat_risiko,
-      tingkat_risiko_detail,
-      indikator,
-      indikator_detail,
-      z_score,
-      rekomendasi,
-      rekomendasi_detail
-    } = aiResult;
+    // Mencegah numeric field overflow pada kolom z_score DECIMAL(4,2)
+    let parsedZScore = parseFloat(z_score);
+    if (isNaN(parsedZScore)) {
+      parsedZScore = 0.00;
+    } else {
+      parsedZScore = Math.max(-99.99, Math.min(99.99, parsedZScore));
+    }
 
     const result = await pool.query(
-      `INSERT INTO analisis (data_id, status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail, indikator, indikator_detail, z_score, rekomendasi, rekomendasi_detail) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO analisis (data_id, status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail, indikator, indikator_detail, z_score, rekomendasi, rekomendasi_detail, model_version) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         data_id, 
         status_stunting, 
@@ -219,9 +311,10 @@ export const createAnalisis = async (req, res, next) => {
         tingkat_risiko_detail || null,
         indikator || null, 
         indikator_detail || null,
-        z_score, 
+        parsedZScore, 
         rekomendasi || null,
-        rekomendasi_detail || null
+        rekomendasi_detail || null,
+        model_version
       ]
     );
 

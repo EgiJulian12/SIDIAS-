@@ -91,11 +91,6 @@ const Diagnosis = () => {
 
   // Submit ke Backend
   const onSubmit = async (data) => {
-    if (!preview || !imageFile) {
-      toast.error("Foto anak wajib diupload atau diambil");
-      return;
-    }
-
     setIsLoading(true);
     setLoadingStep("Menyimpan data balita...");
     const calculatedUmur = calculateAgeInMonths(data.tanggal_lahir);
@@ -109,7 +104,11 @@ const Diagnosis = () => {
       formDataToSend.append("berat_badan", data.berat);
       formDataToSend.append("tinggi_badan", data.tinggi);
       formDataToSend.append("umur_bulan", calculatedUmur);
-      formDataToSend.append("foto", imageFile);
+      
+      // Kirim foto hanya jika ada gambar yang di-upload atau diambil via kamera
+      if (imageFile) {
+        formDataToSend.append("foto", imageFile);
+      }
 
       const resBalita = await api.post("/data-balita", formDataToSend, {
         headers: {
@@ -120,7 +119,7 @@ const Diagnosis = () => {
       const balitaId = resBalita.data.data.id;
       
       await sleep(1000);
-      setLoadingStep("Menganalisis dengan AI Random Forest...");
+      setLoadingStep("Menganalisis dengan AI...");
 
       // 2. Simpan analisis ke tabel analisis (Backend akan menjalankan model AI otomatis)
       const resAnalisis = await api.post("/analisis", {

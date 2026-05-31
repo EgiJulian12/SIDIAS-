@@ -74,6 +74,14 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - **Penghapusan Fitur Hapus di Frontend**: Menghapus seluruh UI fitur hapus (tombol 3 titik, dropdown menu, dan handler `handleDelete`) dari halaman `History.jsx` atas permintaan pengguna. Endpoint `DELETE /api/analisis/:id` tetap tersedia di backend untuk keperluan API.
 - **Hasil TDD**: Seluruh 17 test case (2 test suites: `analisis.test.js` dan `dataBalita.test.js`) berhasil lulus 100%.
 
+### 31 Mei 2026
+
+- **Integrasi Model Deep Learning MobileNetV2**: Memindahkan model visual MobileNetV2 ke `Back-End/AI/saved_model_mobilenet/` dan membuat skrip inferensi `predict_mobilenet.py` untuk mengklasifikasi status gizi visual balita dari gambar (224x224).
+- **Logika Ensemble (Random Forest + MobileNetV2)**: Memperbarui `analisisController.js` agar menjalankan kedua model AI secara paralel menggunakan `Promise.all` ketika foto di-upload. Hasil analisis klinis (Random Forest) dan visual (MobileNetV2) digabungkan secara logis untuk memberikan diagnosis gizi yang komprehensif.
+- **Pencegahan Overflow Database**: Menambahkan mekanisme *defensive clamping* pada `z_score` (membatasinya pada rentang `-99.99` hingga `99.99`) untuk menghindari galat *numeric field overflow* pada kolom `DECIMAL(4,2)` database PostgreSQL ketika memproses nilai IMT ekstrem.
+- **Penyederhanaan Form (Upload Foto Opsional)**: Mengubah validasi form di Front-End (`Diagnosis.jsx`) agar upload foto bersifat opsional. Jika foto tidak diunggah, backend akan otomatis menggunakan model fallback tunggal Random Forest.
+- **Hasil Pengujian**: Seluruh 17 tes integrasi backend tetap lulus 100% dan verifikasi fungsional end-to-end menunjukkan penggabungan hasil ensemble berjalan normal di database.
+
 ---
 
 ## Tools
