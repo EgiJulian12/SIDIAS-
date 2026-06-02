@@ -82,6 +82,12 @@ Project ini masih berada pada tahap pengembangan awal dan saat ini difokuskan un
 - **Penyederhanaan Form (Upload Foto Opsional)**: Mengubah validasi form di Front-End (`Diagnosis.jsx`) agar upload foto bersifat opsional. Jika foto tidak diunggah, backend akan otomatis menggunakan model fallback tunggal Random Forest.
 - **Hasil Pengujian**: Seluruh 17 tes integrasi backend tetap lulus 100% dan verifikasi fungsional end-to-end menunjukkan penggabungan hasil ensemble berjalan normal di database.
 
+### 2 Juni 2026
+
+- **Deployment & Reverse Proxy Setup (Apache2 & Cloudflare Tunnel)**: Menguji dan menyusun skenario deployment menggunakan Apache2 (Port 8080) di server Ubuntu Linux yang diintegrasikan dengan Cloudflare Tunnel untuk penyajian HTTPS aman tanpa membuka port firewall publik.
+- **Penyempurnaan Keamanan .gitignore**: Memperbarui berkas `.gitignore` pada backend untuk mengecualikan direktori Python Virtual Environment (`venv/`, `AI/venv/`), python cache (`__pycache__/`, `*.pyc`), serta file konfigurasi editor lokal (`.vscode/`, `.idea/`) agar repositori bersih dan optimal saat dipublikasikan.
+- **Penyusunan Berkas Template Lingkungan (`.env.example`)**: Membuat berkas `.env.example` di folder backend sebagai acuan setup variabel lingkungan produksi/lokal yang terstandarisasi untuk pengembang baru.
+
 ---
 
 ## Tools

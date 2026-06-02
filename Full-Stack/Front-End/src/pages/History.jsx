@@ -104,7 +104,7 @@ const History = () => {
                     {/* Image */}
                     {item.foto_url ? (
                       <img
-                        src={`http://localhost:5000${item.foto_url}`}
+                        src={`${import.meta.env.VITE_API_BASE_URL || ''}${item.foto_url}`}
                         alt={item.nama}
                         className="w-16 h-16 rounded-3xl object-cover shadow-lg"
                       />

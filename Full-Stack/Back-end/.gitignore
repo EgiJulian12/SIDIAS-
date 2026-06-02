@@ -4,3 +4,19 @@ logs/
 .cache/
 docs/   
 uploads/
+
+# Python Virtual Environment
+venv/
+.venv/
+AI/venv/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+
