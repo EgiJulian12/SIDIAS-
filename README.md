@@ -27,12 +27,12 @@ Guna mengatasi kendala sinyal di wilayah terpencil, SIDIAS diimplementasikan seb
 ---
 
 ## 🎯 Problem Statement (5W + 1H)
-- **What:** Tingginya risiko kesalahan pembacaan alat ukur manual yang menyebabkan data pemantauan gizi menjadi tidak akurat.
-- **Who:** Merugikan balita yang berisiko mendapatkan penanganan gizi yang salah, serta membebani efisiensi kerja kader posyandu.
-- **Where:** Di posyandu dan fasilitas layanan kesehatan tingkat pertama, khususnya di wilayah terpencil yang minim akses internet.
-- **When:** Terjadi secara berulang saat pelaksanaan skrining tumbuh kembang rutin bulanan.
-- **Why:** Pengukuran manual sangat bergantung pada ketelitian dan kondisi fisik manusia (kader), sementara sistem pelaporan digital yang ada saat ini tidak dapat diakses saat kondisi luring (*offline*).
-- **How:** Membangun SIDIAS, sebuah aplikasi web *offline-first* yang memanfaatkan *Computer Vision* untuk mengekstraksi data ukur dan fitur biometrik wajah balita secara otomatis melalui kamera gawai.
+- **What:** Risiko ketidakakuratan diagnosis stunting akibat inkonsistensi pencatatan data dan subjektivitas dalam penilaian visual gejala fisik balita.
+- **Who:** Berdampak pada keterlambatan penanganan bagi balita berisiko serta penurunan kualitas validitas data laporan kesehatan nasional. 
+- **Where:** Di fasilitas pelayanan kesehatan primer dan Posyandu yang membutuhkan alat verifikasi klinis pendukung secara cepat. 
+- **When:** Terjadi pada setiap periode pelaksanaan skrining tumbuh kembang rutin bulanan.
+- **Why:** Metode konvensional belum memiliki sistem verifikasi visual otomatis untuk mendeteksi indikator malnutrisi melalui biometrik tubuh.
+- **How:** Membangun aplikasi web yang memproses data input manual dan melakukan analisis citra biometrik wajah serta struktur fisik melalui kamera gawai.
 
 ---
 
