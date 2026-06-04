@@ -15,38 +15,39 @@
 
 ---
 
-## 📌 Ringkasan Eksekutif
+## Penjelasan Singkat SIDIAS
 
-### Latar Belakang & Alasan Pemilihan Proyek
-Prevalensi stunting di Indonesia (21,6%) masih tertinggal dari target pemerintah (14%). Pemantauan gizi di posyandu mayoritas masih dieksekusi secara manual, sehingga rentan terhadap *human error* dan berisiko memicu kesalahan diagnosis. 
-
-Sistem ini dirancang untuk mengotomatisasi ekstraksi digit alat ukur dan analisis biometrik wajah balita melalui algoritma **Computer Vision** secara non-invasif. Klasifikasi risiko gizi kemudian diproses menggunakan model **Machine Learning**. 
-
-Guna mengatasi kendala sinyal di wilayah terpencil, SIDIAS diimplementasikan sebagai **Progressive Web App (PWA)** berarsitektur *offline-first*. Inovasi ini menjamin proses pendataan tetap berjalan penuh tanpa internet, memberikan manfaat efisiensi dan akurasi maksimal bagi instansi kesehatan.
+**SIDIAS** adalah sebuah platform berbasis *Artificial Intelligence* (AI) multimodal yang dirancang untuk mendeteksi dan memprediksi potensi risiko stunting pada balita secara dini, cepat, dan akurat. Platform ini menggabungkan analisis data klinis antropometri dan analisis visual fisik balita guna memberikan pendekatan screening yang komprehensif bagi orang tua, kader posyandu, dan tenaga medis.
 
 ---
 
-## 🎯 Problem Statement (5W + 1H)
-- **What:** Risiko ketidakakuratan diagnosis stunting akibat inkonsistensi pencatatan data dan subjektivitas dalam penilaian visual gejala fisik balita.
-- **Who:** Berdampak pada keterlambatan penanganan bagi balita berisiko serta penurunan kualitas validitas data laporan kesehatan nasional. 
-- **Where:** Di fasilitas pelayanan kesehatan primer dan Posyandu yang membutuhkan alat verifikasi klinis pendukung secara cepat. 
-- **When:** Terjadi pada setiap periode pelaksanaan skrining tumbuh kembang rutin bulanan.
-- **Why:** Metode konvensional belum memiliki sistem verifikasi visual otomatis untuk mendeteksi indikator malnutrisi melalui biometrik tubuh.
-- **How:** Membangun aplikasi web yang memproses data input manual dan melakukan analisis citra biometrik wajah serta struktur fisik melalui kamera gawai.
+## 🚀 Fitur Utama & Pendekatan AI Multimodal
+
+SIDIAS menggunakan pendekatan **Ensemble Model Architecture** untuk mengolah dua jenis modalitas data yang berbeda (*Multimodal Dataset*):
+
+* **Tabular Stunting Detection (Data Klinis):** Memprediksi status stunting menggunakan algoritma **Random Forest Classifier** berdasarkan data antropometri anak (Usia, Jenis Kelamin, Tinggi Badan, Berat Badan) serta fitur buatan klinis (*Feature Engineering*) seperti Indeks Massa Tubuh (IMT) dan Rasio Tinggi per Usia. Masalah *class imbalance* pada data diatasi menggunakan teknik **SMOTE**.
+* **Visual Stunting Detection (Data Gambar):** Melakukan analisis karakteristik fisik luar balita melalui input foto secara langsung menggunakan arsitektur *Deep Learning* **MobileNetV2** yang efisien dan optimal untuk dijalankan di lingkungan web/mobile.
 
 ---
 
-## 🚀 Cakupan Proyek dan Hasil Kerja
+## 🛠️ Alur Kerja Sistem (Data Pipeline & Integration)
 
-### Garis Besar Batas-batas Proyek dan Metode Pemecahan Tugas
-Cakupan proyek SIDIAS dibatasi pada pengembangan aplikasi berbasis web yang dioptimalkan untuk memindai angka pada alat ukur fisik dan menganalisis status gizi balita. 
+1.  **Form Input & Capture:** Pengguna memasukkan data antropometri dan mengunggah foto fisik balita melalui antarmuka web.
+2.  **Preprocessing & Feature Engineering (Tabular):** Sistem secara otomatis menghitung nilai klinis IMT dan Rasio Tinggi per Usia berdasarkan input mentah (*data clean*).
+3.  **Data Standardization:** Data tabular disinkronisasikan menggunakan komponen `StandardScaler` (`scaler.pkl`) ke dalam format *Z-Score* desimal sebelum diproses oleh model.
+4.  **AI Dual Inference:** * Data klinis diproses oleh `random_forest_stunting_model.pkl`.
+    * Data visual foto diproses oleh model `MobileNetV2` (`.h5` / SavedModel).
+5.  **Ensemble Output:** Sistem mengombinasikan hasil prediksi untuk mengeluarkan diagnosis akhir status stunting balita beserta tingkat keyakinan (probabilitas) AI.
 
-Tugas perancangan sistem dipecahkan melalui pendekatan modular yang komprehensif, di mana pekerjaan dibagi ke dalam tiga jalur Learning Path:
-- 💻 **Full Stack Development**
-- 📊 **Data Science**
-- 🤖 **AI Engineering**
+---
 
-Setiap jalur akan bekerja secara paralel dan terintegrasi untuk memastikan proyek dapat diserahkan secara utuh dan fungsional.
+## 💻 Tech Stack Proyek
+
+Arsitektur aplikasi dibangun dengan ekosistem modern yang terbagi menjadi tiga komponen utama:
+
+* **Front-End:** React.js, Vite, dan TailwindCSS (Memberikan antarmuka yang responsif, cepat, dan *user-friendly*).
+* **Back-End:** Node.js, Express.js, dan PostgreSQL (Sebagai basis data relasional untuk menyimpan riwayat rekam medis deteksi balita).
+* **AI Component:** Python, Scikit-Learn (Random Forest & Preprocessing), TensorFlow/Keras (MobileNetV2), Pandas, dan Joblib.
 
 ---
 
@@ -182,3 +183,8 @@ Setelah Anda menjalankan `node seed-admin.js` di langkah Back-end, gunakan krede
 ## 📌 Catatan Tambahan
 * Jika Anda menjalankan aplikasi secara lokal untuk keperluan pengembangan, pastikan backend (`port 5000`) dan frontend (`port 5173`) berjalan secara bersamaan di terminal terpisah.
 * Pastikan virtual environment Python (`venv`) telah diaktifkan saat menjalankan server backend agar model AI dapat memproses data dengan benar.
+
+---
+
+## Tautan Model AI
+Link Google Drive : https://drive.google.com/drive/folders/1ek88NugRZs3cUxqjJrG51oiQaKO582MK
