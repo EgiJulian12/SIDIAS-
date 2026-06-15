@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sidias-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sidias
+      POSTGRES_PASSWORD: sidias_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sidias"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./Back-End
+    image: fairuzhere/sidias-backend:latest
+    container_name: sidias-backend
+    restart: always
+    environment:
+      PORT: 5000
+      DB_USER: postgres
+      DB_HOST: db
+      DB_NAME: sidias
+      DB_PASSWORD: sidias_password
+      DB_PORT: 5432
+      JWT_SECRET: supersecretkey123
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads-data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./Front-End
+      args:
+        - VITE_API_URL=http://localhost:5000/api
+    image: fairuzhere/sidias-frontend:latest
+    container_name: sidias-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
+  uploads-data:

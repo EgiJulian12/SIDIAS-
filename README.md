@@ -53,136 +53,70 @@ Arsitektur aplikasi dibangun dengan ekosistem modern yang terbagi menjadi tiga k
 
 ## 🛠️ Prasyarat Instalasi (Prerequisites)
 
-Sebelum memulai instalasi lokal, pastikan Anda telah memasang perangkat lunak berikut di komputer Anda:
-* **Node.js** (Rekomendasi versi LTS 18.x atau 20.x)
-* **Python 3.10+** (Lengkap dengan `pip`)
-* **PostgreSQL Database Server**
-* **Git**
+Sebelum memulai instalasi, pastikan Anda telah memasang perangkat lunak berikut di komputer Anda:
+* **Docker** & **Docker Compose** (Disarankan Docker Desktop untuk Windows/macOS, atau Docker Engine untuk Linux)
+* **Git** (Untuk mengkloning kode sumber)
 
 ---
 
-## 🚀 Langkah Instalasi & Menjalankan Aplikasi di Lokal
+## 🚀 Langkah Instalasi & Menjalankan Aplikasi dengan Docker
 
-Ikuti langkah-langkah di bawah ini secara berurutan:
+Dengan menggunakan Docker, Anda tidak perlu memasang Node.js, Python, PostgreSQL, atau library AI secara manual di komputer Anda. Semua environment beserta dependensinya sudah dikontainerisasi secara otomatis.
 
-### 1. Kloning Repositori
+### 1. Kloning Repositori & Navigasi ke Folder Full-Stack
 Jika Anda belum mengkloning repositori ini, jalankan perintah berikut di terminal Anda:
 ```bash
-git clone https://github.com/username/repositori-anda.git
-cd nama-folder-project/Full-Stack
+git clone https://github.com/EgiJulian12/SIDIAS-.git
+cd SIDIAS-/Full-Stack
+```
+
+### 2. Menjalankan Aplikasi (Menggunakan Image Jadi)
+Untuk mempermudah penggunaan di PC lain tanpa perlu build dari awal, silakan gunakan perintah berikut di dalam folder `Full-Stack/`:
+```bash
+docker compose up -d
+```
+*Perintah ini akan secara otomatis mengunduh (pull) image Postgres, Backend, dan Frontend dari registry Docker Hub, kemudian menginisialisasi skema database serta menjalankan aplikasinya.*
+
+Untuk memastikan semua kontainer berjalan dengan lancar, jalankan perintah:
+```bash
+docker compose ps
+```
+
+### 3. Menghentikan Aplikasi
+Untuk mematikan semua layanan aplikasi, jalankan perintah:
+```bash
+docker compose down
 ```
 
 ---
 
-### 2. Konfigurasi & Setup Database (PostgreSQL)
+## ⚙️ Build Ulang Image Lokal (Khusus Developer)
 
-1. Buka PostgreSQL client (seperti pgAdmin, DBeaver, atau via terminal `psql`).
-2. Buat database baru bernama `sidias`:
-   ```sql
-   CREATE DATABASE sidias;
-   ```
-3. Buat tabel-tabel database dengan mengimpor skema dari file `Back-end/schema.sql`. 
-   * **Jika menggunakan terminal (CLI):**
-     ```bash
-     psql -U postgres -d sidias -f Back-end/schema.sql
-     ```
-   * **Jika menggunakan pgAdmin/DBeaver:** Buka Query Tool, lalu salin isi dari berkas `Back-end/schema.sql` dan jalankan (Execute).
+Jika Anda melakukan perubahan pada kode program di Front-End atau Back-End dan ingin men-build ulang image Docker secara lokal di PC Anda, ikuti langkah berikut:
 
----
-
-### 3. Setup & Menjalankan Back-end (Node.js & Python AI)
-
-1. Masuk ke folder `Back-end` melalui terminal:
+1. **Membangun Ulang (Build) Image Lokal:**
    ```bash
-   cd Back-end
+   docker compose -f docker-compose.build.yml build
    ```
-2. Pasang semua dependensi Node.js:
+2. **Menjalankan Hasil Build Lokal:**
    ```bash
-   npm install
+   docker compose -f docker-compose.build.yml up -d
    ```
-3. Buat file `.env` di dalam folder `Back-end` dengan menyalin template atau membuat baru:
-   ```env
-   # Server Configuration
-   PORT=5000
-
-   # Database Configuration
-   DB_USER=postgres
-   DB_HOST=127.0.0.1
-   DB_NAME=sidias
-   DB_PASSWORD=12345   # Ganti dengan password PostgreSQL lokal Anda
-   DB_PORT=5432
-
-   # JWT Secret Key
-   JWT_SECRET=supersecretkey123
-   ```
-4. **Setup Virtual Environment untuk Python AI:**
-   * **Buat virtual environment (venv) baru:**
-     ```bash
-     python -m venv AI/venv
-     ```
-   * **Aktifkan virtual environment:**
-     * **Windows (Command Prompt / CMD):**
-       ```cmd
-       AI\venv\Scripts\activate
-       ```
-     * **Windows (PowerShell):**
-       ```powershell
-       .\AI\venv\Scripts\activate.ps1
-       ```
-     * **macOS / Linux:**
-       ```bash
-       source AI/venv/bin/activate
-       ```
-   * **Install library Python yang dibutuhkan:**
-     ```bash
-     pip install -r AI/requirements.txt
-     ```
-5. **Jalankan Seed Admin** (membuat akun administrator awal di database):
-   ```bash
-   node seed-admin.js
-   ```
-6. **Jalankan Server Back-end:**
-   ```bash
-   npm run dev
-   ```
-   *Server backend akan berjalan di http://localhost:5000.*
-
----
-
-### 4. Setup & Menjalankan Front-End (React Vite)
-
-1. Buka terminal baru dan masuk ke folder `Front-End`:
-   ```bash
-   cd Front-End
-   ```
-2. Pasang semua dependensi frontend:
-   ```bash
-   npm install
-   ```
-3. Buat file `.env.development` di dalam folder `Front-End` untuk mengarahkan API secara lokal:
-   ```env
-   VITE_API_URL=http://localhost:5000/api
-   VITE_API_BASE_URL=http://localhost:5000
-   ```
-4. Jalankan Server Front-end:
-   ```bash
-   npm run dev
-   ```
-   *Aplikasi frontend akan berjalan di http://localhost:5173 (atau port default lainnya yang tertera di terminal).*
 
 ---
 
 ## 🔑 Akun Login Default (Admin)
 
-Setelah Anda menjalankan `node seed-admin.js` di langkah Back-end, gunakan kredensial berikut untuk masuk ke dashboard:
+Ketika database PostgreSQL pertama kali dibuat, sistem backend secara otomatis menjalankan skema database dan membuat akun admin cadangan:
 * **NIK:** `admin`
 * **Password:** `admin123`
 
 ---
 
-## 📌 Catatan Tambahan
-* Jika Anda menjalankan aplikasi secara lokal untuk keperluan pengembangan, pastikan backend (`port 5000`) dan frontend (`port 5173`) berjalan secara bersamaan di terminal terpisah.
-* Pastikan virtual environment Python (`venv`) telah diaktifkan saat menjalankan server backend agar model AI dapat memproses data dengan benar.
+## 🌐 Akses Layanan Aplikasi
+* **Frontend Web App:** [http://localhost](http://localhost) (Port 80)
+* **Backend API Base URL:** [http://localhost:5000/api](http://localhost:5000/api) (Port 5000)
+* **Database PostgreSQL:** Port `5432` (Username: `postgres`, Password: `sidias_password`, Database Name: `sidias`)
 
 ---
 
