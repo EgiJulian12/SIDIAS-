@@ -5,5 +5,8 @@
   "scripts": {
     "install-all": "npm install --prefix Front-End && npm install --prefix Back-End",
     "dev": "npx concurrently -k -n \"frontend,backend\" -c \"blue,green\" \"npm run dev --prefix Front-End\" \"npm start --prefix Back-End\""
+  },
+  "dependencies": {
+    "all": "^0.0.0"
   }
 }
