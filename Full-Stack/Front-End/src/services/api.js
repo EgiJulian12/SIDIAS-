@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: 'https://sidias-api.vercel.app/api',
 });
 
 // Interceptor untuk menyisipkan token JWT secara otomatis
