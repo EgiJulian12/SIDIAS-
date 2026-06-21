@@ -5,8 +5,9 @@ import { fileURLToPath } from 'url';
 import dataBalitaRoutes from '../routes/dataBalitaRoutes.js';
 import analisisRoutes from '../routes/analisisRoutes.js';
 import authRoutes from '../routes/authRoutes.js';
-import logger from './middleware/logger.js';
-import errorHandler from './middleware/errorHandler.js';
+// PERBAIKAN: Mengubah ./ menjadi ../ agar menunjuk ke folder middleware di luar folder api
+import logger from '../middleware/logger.js';
+import errorHandler from '../middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,8 +20,9 @@ app.use(express.json());
 app.use(cors());
 // Middleware untuk mencatat log request
 app.use(logger);
-// Middleware static folder uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// PERBAIKAN: Mengarahkan folder statis uploads mundur satu folder ke luar area 'api'
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Mendaftarkan rute (routing) API
 app.use('/api/auth', authRoutes);
