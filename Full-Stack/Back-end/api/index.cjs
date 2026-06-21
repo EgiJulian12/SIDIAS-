@@ -1,16 +1,11 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dataBalitaRoutes from '../routes/dataBalitaRoutes.js';
-import analisisRoutes from '../routes/analisisRoutes.js';
-import authRoutes from '../routes/authRoutes.js';
-// PERBAIKAN: Mengubah ./ menjadi ../ agar menunjuk ke folder middleware di luar folder api
-import logger from '../middleware/logger.js';
-import errorHandler from '../middleware/errorHandler.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const dataBalitaRoutes = require('../routes/dataBalitaRoutes.js');
+const analisisRoutes = require('../routes/analisisRoutes.js');
+const authRoutes = require('../routes/authRoutes.js');
+const logger = require('../middleware/logger.js');
+const errorHandler = require('../middleware/errorHandler.js');
 
 const app = express();
 
@@ -21,7 +16,7 @@ app.use(cors());
 // Middleware untuk mencatat log request
 app.use(logger);
 
-// PERBAIKAN: Mengarahkan folder statis uploads mundur satu folder ke luar area 'api'
+// Mengarahkan folder statis uploads mundur satu folder ke luar area 'api'
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Mendaftarkan rute (routing) API
@@ -32,4 +27,5 @@ app.use('/api/analisis', analisisRoutes);
 // Middleware untuk menangani error secara terpusat
 app.use(errorHandler);
 
-export default app;
+// PERBAIKAN: Menggunakan export ala CommonJS yang dikenali Vercel Serverless
+module.exports = app;
