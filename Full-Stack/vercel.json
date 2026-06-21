@@ -6,8 +6,9 @@
       "use": "@vercel/node"
     },
     {
-      "src": "Full-Stack/Front-End/**/*",
-      "use": "@vercel/static"
+      "src": "Full-Stack/Front-End/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
     }
   ],
   "routes": [
@@ -16,8 +17,12 @@
       "dest": "Full-Stack/Back-end/api/index.js"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "Full-Stack/Front-End/dist/assets/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "Full-Stack/Front-End/$1"
+      "dest": "Full-Stack/Front-End/dist/index.html"
     }
   ]
 }
