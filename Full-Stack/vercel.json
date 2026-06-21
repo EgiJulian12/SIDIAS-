@@ -2,22 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "Front-End/package.json",
-      "use": "@vercel/static-build"
+      "src": "Full-Stack/Back-end/api/index.js",
+      "use": "@vercel/node"
     },
     {
-      "src": "Back-end/api/index.js",
-      "use": "@vercel/node"
+      "src": "Full-Stack/Front-End/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "Back-end/api/index.js"
+      "src": "/api/(.*)",
+      "dest": "Full-Stack/Back-end/api/index.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "Front-End/$1"
+      "src": "/(.*)",
+      "dest": "Full-Stack/Front-End/$1"
     }
   ]
 }
