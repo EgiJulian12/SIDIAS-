@@ -1,11 +1,18 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
-// Pastikan folder uploads ada
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+// Pastikan folder uploads aman (di serverless gunakan /tmp)
+const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const uploadDir = isServerless ? path.join(os.tmpdir(), 'uploads') : 'uploads';
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (err) {
+  // Silent fail if directory cannot be created in read-only environment
 }
 
 const storage = multer.diskStorage({

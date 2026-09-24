@@ -1,5 +1,4 @@
-// File utama untuk menjalankan server aplikasi
-import app from './app.js';
+import app from './api/index.js';
 
 // Menentukan port yang digunakan server
 const PORT = process.env.PORT || 5000;
