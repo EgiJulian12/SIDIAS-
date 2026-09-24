@@ -17,6 +17,14 @@ app.use(express.json());
 app.use(cors());
 app.use(logger);
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'SIDIAS API is running smoothly' });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'SIDIAS API is running smoothly' });
+});
+
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api/auth', authRoutes);
