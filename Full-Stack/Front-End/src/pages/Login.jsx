@@ -1,27 +1,27 @@
 import { useState } from "react";
-
 import { motion } from "framer-motion";
-
 import { Link, useNavigate } from "react-router-dom";
-
 import toast, { Toaster } from "react-hot-toast";
-
 import api from "../services/api";
-
+import { useAuth } from "../hooks/useAuth";
 import {
   FaHeartbeat,
   FaUser,
   FaLock,
   FaArrowRight,
+  FaChild,
+  FaShieldAlt
 } from "react-icons/fa";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     nik: "",
     password: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -37,22 +37,22 @@ const Login = () => {
       return toast.error("NIK dan password wajib diisi");
     }
 
+    setIsLoading(true);
     try {
       const response = await api.post("/auth/login", formData);
       const { token, user } = response.data;
 
-      localStorage.setItem("sidias_token", token);
-      localStorage.setItem("sidias_login", "true");
-      localStorage.setItem("sidias_user", JSON.stringify(user));
-
-      toast.success("Login berhasil");
+      login(user, token);
+      toast.success("Login berhasil! Selamat datang di SIDIAS.");
 
       setTimeout(() => {
         navigate("/dashboard");
-      }, 1500);
+      }, 800);
     } catch (error) {
-      const message = error.response?.data?.message || "Login gagal";
+      const message = error.response?.data?.message || "Login gagal, periksa NIK dan password Anda";
       toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,98 +60,87 @@ const Login = () => {
     <>
       <Toaster position="top-right" />
 
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-sky-100 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Ambient background blurs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-teal-200/40 blur-3xl rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-200/40 blur-3xl rounded-full translate-x-1/3 translate-y-1/3 pointer-events-none" />
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/40 p-8"
+          className="w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-[36px] shadow-2xl border border-slate-100 p-8 sm:p-10 relative z-10 space-y-6"
         >
-
-          {/* LOGO */}
-          <div className="text-center mb-8">
-
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white text-4xl mx-auto shadow-xl">
-              <FaHeartbeat />
+          {/* Logo & Brand Header */}
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-3xl mx-auto shadow-lg shadow-teal-500/20">
+              <FaChild />
             </div>
 
-            <h1 className="text-4xl font-bold text-slate-800 mt-6">
-              SIDIAS
-            </h1>
-
-            <p className="text-slate-500 mt-3">
-              Sistem Deteksi Stunting Anak
-            </p>
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+                SIDIAS Posyandu
+              </h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Sistem Diagnosis Anak Stunting & Gizi Terpadu
+              </p>
+            </div>
           </div>
 
-          {/* FORM */}
-          <form onSubmit={handleLogin} className="space-y-5">
-
-            {/* NIK */}
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-
-              <label className="text-slate-700 font-semibold block mb-2">
-                NIK
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Nomor Induk Kependudukan (NIK)
               </label>
-
               <div className="relative">
-
-                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-
+                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
                 <input
                   type="text"
                   name="nik"
                   placeholder="Masukkan 16 digit NIK"
                   value={formData.nik}
                   onChange={handleChange}
-                  maxLength={16}
-                  className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all bg-slate-50/50"
+                  required
                 />
               </div>
             </div>
 
-            {/* PASSWORD */}
             <div>
-
-              <label className="text-slate-700 font-semibold block mb-2">
-                Password
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Kata Sandi
               </label>
-
               <div className="relative">
-
-                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
                 <input
                   type="password"
                   name="password"
-                  placeholder="Masukkan password"
+                  placeholder="Masukkan password Anda"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-12 outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all bg-slate-50/50"
+                  required
                 />
               </div>
             </div>
 
-            {/* BUTTON */}
             <button
               type="submit"
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-bold text-lg shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-teal-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 mt-2"
             >
-              Login
-              <FaArrowRight />
+              {isLoading ? "Memproses..." : "Masuk ke Sistem"}
+              <FaArrowRight className="text-xs" />
             </button>
           </form>
 
-          {/* FOOTER */}
-          <p className="text-center text-slate-500 mt-8">
-            Belum punya akun?
-            <Link
-              to="/signup"
-              className="text-teal-600 font-bold ml-2"
-            >
-              Daftar
+          {/* Footer Signup Link */}
+          <div className="pt-2 text-center border-t border-slate-100 text-xs text-slate-500">
+            Belum memiliki akun kader/orang tua?{" "}
+            <Link to="/signup" className="font-extrabold text-teal-600 hover:text-teal-700">
+              Daftar Sekarang
             </Link>
-          </p>
+          </div>
         </motion.div>
       </div>
     </>

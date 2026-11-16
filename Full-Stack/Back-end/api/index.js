@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dataBalitaRoutes from '../routes/dataBalitaRoutes.js';
 import analisisRoutes from '../routes/analisisRoutes.js';
 import authRoutes from '../routes/authRoutes.js';
+import dashboardRoutes from '../routes/dashboardRoutes.js';
 import logger from '../middleware/logger.js';
 import errorHandler from '../middleware/errorHandler.js';
 
@@ -54,6 +55,9 @@ app.use('/data-balita', dataBalitaRoutes);
 
 app.use('/api/analisis', analisisRoutes);
 app.use('/analisis', analisisRoutes);
+
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 app.use(errorHandler);
 
