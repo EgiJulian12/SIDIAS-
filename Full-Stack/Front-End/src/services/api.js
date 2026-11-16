@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+// Vite otomatis pakai .env.development saat dev, .env.production saat build
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://sidias-api.vercel.app/api',
 });
 
 // Interceptor: sisipkan token JWT secara otomatis di setiap request
@@ -22,7 +23,6 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       const msg = error.response.data?.message || '';
-      // Jika token tidak valid atau expired, bersihkan sesi dan arahkan ke login
       if (
         msg.includes('Token tidak valid') ||
         msg.includes('token') ||
@@ -33,7 +33,6 @@ api.interceptors.response.use(
         localStorage.removeItem('sidias_token');
         localStorage.removeItem('sidias_user');
         localStorage.removeItem('sidias_login');
-        // Redirect ke login — replace agar tidak bisa back ke halaman protected
         window.location.replace('/login');
       }
     }
