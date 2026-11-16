@@ -95,7 +95,13 @@ export const getAllAnalisis = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: result.rowCount,
-      data: result.rows
+      data: result.rows.map(row => {
+      let personalized = null;
+      if (row.rekomendasi_detail) {
+        try { personalized = JSON.parse(row.rekomendasi_detail); } catch (e) {}
+      }
+      return { ...row, personalized };
+    })
     });
   } catch (error) {
     next(error);
@@ -260,12 +266,14 @@ export const createAnalisis = async (req, res, next) => {
         // 7. z_score diisi dari Random Forest (klinis)
         z_score = rfResult.z_score;
         
-        // 8. rekomendasi menggabungkan keduanya
-        rekomendasi = `Rekomendasi Klinis: ${rfResult.rekomendasi} Rekomendasi Visual: ${mnResult.rekomendasi}`;
-        
-        // 9. rekomendasi_detail menggabungkan keduanya
-        rekomendasi_detail = `Rekomendasi Klinis: ${rfResult.rekomendasi_detail} Rekomendasi Visual: ${mnResult.rekomendasi_detail}`;
-        
+        // 8. rekomendasi & rekomendasi_detail terstruktur
+        rekomendasi = rfResult.rekomendasi;
+        if (rfResult.personalized) {
+          rfResult.personalized.visual_insight = mnResult.status_detail;
+          rekomendasi_detail = JSON.stringify(rfResult.personalized);
+        } else {
+          rekomendasi_detail = rfResult.rekomendasi_detail;
+        }
         // 10. model_version
         model_version = 'Ensemble (Random Forest + MobileNetV2)';
 

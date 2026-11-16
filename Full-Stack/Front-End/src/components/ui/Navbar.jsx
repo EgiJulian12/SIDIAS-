@@ -1,298 +1,231 @@
 import { useState, useEffect, useRef } from "react";
-
 import {
   FaBell,
   FaCheckCircle,
   FaHeartbeat,
   FaInfoCircle,
   FaExclamationCircle,
+  FaCalculator,
+  FaUserCircle,
+  FaSignOutAlt,
+  FaBars
 } from "react-icons/fa";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import QuickCalculatorModal from "../common/QuickCalculatorModal";
 
-const Navbar = () => {
+const Navbar = ({ setIsSidebarOpen }) => {
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const [openNotif, setOpenNotif] = useState(false);
-
-  const notifRef = useRef(null);
-
+  const [openProfile, setOpenProfile] = useState(false);
+  const [openCalculator, setOpenCalculator] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
-  // LOAD NOTIF
-  useEffect(() => {
-    const storedNotif =
-      JSON.parse(localStorage.getItem("sidias_notifications")) || [];
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
 
+  useEffect(() => {
+    const storedNotif = JSON.parse(localStorage.getItem("sidias_notifications")) || [];
     if (storedNotif.length === 0) {
       const dummyNotif = [
         {
           id: 1,
-          title: "Pemeriksaan Berhasil",
-          message:
-            "Data pemeriksaan anak berhasil disimpan ke riwayat.",
+          title: "Sistem AI Siap Digunakan",
+          message: "SIDIAS kini dilengkapi rekomendasi nutrisi adaptif & kurva KMS Digital WHO.",
           type: "success",
-          time: "Baru saja",
+          time: "Hari ini",
           read: false,
         },
         {
           id: 2,
-          title: "Reminder Posyandu",
-          message:
-            "Jangan lupa lakukan pemeriksaan rutin bulan ini.",
+          title: "Pengingat Posyandu",
+          message: "Jadwal penimbangan balita dan vitamin A Posyandu rutin bulan ini.",
           type: "info",
-          time: "1 jam lalu",
+          time: "Kemarin",
           read: false,
         },
       ];
-
-      localStorage.setItem(
-        "sidias_notifications",
-        JSON.stringify(dummyNotif)
-      );
-
+      localStorage.setItem("sidias_notifications", JSON.stringify(dummyNotif));
       setNotifications(dummyNotif);
     } else {
       setNotifications(storedNotif);
     }
   }, []);
 
-  // CLOSE NOTIF SAAT KLIK LUAR
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        notifRef.current &&
-        !notifRef.current.contains(event.target)
-      ) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
         setOpenNotif(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setOpenProfile(false);
+      }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // MARK ALL READ
   const markAllAsRead = () => {
-    const updatedNotif = notifications.map((item) => ({
-      ...item,
-      read: true,
-    }));
-
-    setNotifications(updatedNotif);
-
-    localStorage.setItem(
-      "sidias_notifications",
-      JSON.stringify(updatedNotif)
-    );
+    const updated = notifications.map((n) => ({ ...n, read: true }));
+    setNotifications(updated);
+    localStorage.setItem("sidias_notifications", JSON.stringify(updated));
   };
 
-  const unreadCount = notifications.filter(
-    (item) => !item.read
-  ).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // ICON
-  const renderIcon = (type) => {
-    switch (type) {
-      case "success":
-        return (
-          <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-            <FaCheckCircle />
-          </div>
-        );
-
-      case "health":
-        return (
-          <div className="w-11 h-11 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center">
-            <FaHeartbeat />
-          </div>
-        );
-
-      default:
-        return (
-          <div className="w-11 h-11 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center">
-            <FaInfoCircle />
-          </div>
-        );
-    }
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
+
+  const displayName = user?.name || user?.nik || "Kader Posyandu";
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="w-full flex items-center justify-between mt-8 mb-3 px-2 md:px-4">
-
-      {/* LEFT */}
-      <div className="ml-2 md:ml-4">
-
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
-          Dashboard SIDIAS
-        </h1>
-
-        <p className="text-slate-500 mt-1 text-sm md:text-base">
-          Sistem Deteksi Stunting Anak
-        </p>
-      </div>
-
-      {/* RIGHT */}
-      <div className="flex items-center gap-3 md:gap-4">
-
-        {/* NOTIFICATION */}
-        <div className="relative" ref={notifRef}>
-
+    <>
+      <header className="w-full flex items-center justify-between py-4 px-4 md:px-8 bg-white/70 backdrop-blur-xl border-b border-slate-100/80 sticky top-0 z-30">
+        {/* Left: Mobile hamburger & Title */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setOpenNotif(!openNotif)}
-            className="relative w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-700 hover:scale-105 transition-all"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            className="lg:hidden w-10 h-10 rounded-2xl bg-white shadow-sm border border-slate-200/60 flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <FaBell className="text-lg md:text-xl" />
-
-            {/* BADGE */}
-            {unreadCount > 0 && (
-              <div className="absolute -top-1 -right-1 min-w-[22px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] flex items-center justify-center font-bold shadow-lg">
-                {unreadCount}
-              </div>
-            )}
+            <FaBars className="text-base" />
           </button>
-
-          {/* DROPDOWN */}
-          {openNotif && (
-            <div className="absolute right-0 mt-4 w-[360px] bg-white rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden z-[999]">
-
-              {/* HEADER */}
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800">
-                    Notifikasi
-                  </h2>
-
-                  <p className="text-slate-500 text-sm mt-1">
-                    Informasi pelayanan & kesehatan
-                  </p>
-                </div>
-
-                {notifications.length > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-sm font-semibold text-teal-600 hover:text-teal-700"
-                  >
-                    Tandai Dibaca
-                  </button>
-                )}
-              </div>
-
-              {/* CONTENT */}
-              <div className="max-h-[450px] overflow-y-auto">
-
-                {notifications.length === 0 ? (
-                  <div className="p-10 text-center">
-
-                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-3xl text-slate-400 mb-5">
-                      <FaExclamationCircle />
-                    </div>
-
-                    <h3 className="text-xl font-bold text-slate-700">
-                      Belum Ada Notifikasi
-                    </h3>
-
-                    <p className="text-slate-500 mt-2">
-                      Informasi terbaru akan muncul di sini.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4 space-y-4">
-
-                    {notifications.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`rounded-3xl p-5 border transition-all ${item.read
-                            ? "bg-slate-50 border-slate-100"
-                            : "bg-teal-50 border-teal-100"
-                          }`}
-                      >
-
-                        <div className="flex gap-4">
-
-                          {renderIcon(item.type)}
-
-                          <div className="flex-1">
-
-                            <div className="flex items-start justify-between gap-3">
-
-                              <h3 className="font-bold text-slate-800 text-base leading-tight">
-                                {item.title}
-                              </h3>
-
-                              {!item.read && (
-                                <div className="w-3 h-3 rounded-full bg-teal-500 mt-1"></div>
-                              )}
-                            </div>
-
-                            <p className="text-slate-600 mt-2 leading-relaxed text-sm">
-                              {item.message}
-                            </p>
-
-                            <p className="text-xs text-slate-400 mt-3">
-                              {item.time}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              SIDIAS <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-teal-50 text-teal-700 border border-teal-200/60">Healthcare</span>
+            </h1>
+            <p className="text-xs text-slate-500 hidden sm:block">
+              Sistem Diagnosis Stunting & Pelayanan Gizi Terpadu
+            </p>
+          </div>
         </div>
 
-        {/* PROFILE / LOGIN */}
-        {localStorage.getItem("sidias_login") ? (
-
-          <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-lg border border-slate-100">
-
-            {/* AVATAR */}
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 text-white flex items-center justify-center font-bold text-base shadow-md">
-              {JSON.parse(localStorage.getItem("sidias_user"))?.name?.charAt(0) || "U"}
-            </div>
-
-            {/* TEXT */}
-            <div className="leading-tight">
-
-              <h3 className="font-bold text-slate-800 text-base">
-                {JSON.parse(localStorage.getItem("sidias_user"))?.name || "User"}
-              </h3>
-
-              <p className="text-sm text-slate-500">
-                SIDIAS Healthcare
-              </p>
-            </div>
-
-            {/* LOGOUT */}
-            <button
-              onClick={() => {
-                localStorage.removeItem("sidias_login");
-
-                window.location.reload();
-              }}
-              className="ml-2 text-sm font-semibold text-red-500 hover:text-red-600"
-            >
-              Logout
-            </button>
-          </div>
-
-        ) : (
-
+        {/* Right Actions */}
+        <div className="flex items-center gap-3">
+          {/* Quick Calculator Shortcut */}
           <button
-            onClick={() => window.location.href = "/login"}
-            className="hidden md:flex items-center justify-center h-12 px-6 rounded-2xl bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-semibold shadow-lg hover:scale-105 transition-all"
+            onClick={() => setOpenCalculator(true)}
+            className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200/80 transition-all shadow-sm"
           >
-            Login
+            <FaCalculator />
+            <span>Kalkulator Cepat</span>
           </button>
 
-        )}
-      </div>
-    </div>
+          {/* Notifications */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setOpenNotif(!openNotif)}
+              className="relative w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-white shadow-sm border border-slate-200/60 flex items-center justify-center text-slate-600 hover:text-teal-600 hover:border-teal-200 transition-all"
+            >
+              <FaBell className="text-base" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-md animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown */}
+            {openNotif && (
+              <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-fadeIn">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <h3 className="font-bold text-slate-800 text-sm">Notifikasi</h3>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+                    >
+                      Tandai Dibaca
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`p-4 transition-colors ${n.read ? "bg-white" : "bg-teal-50/40"}`}
+                    >
+                      <div className="flex gap-3 items-start">
+                        <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center flex-shrink-0 text-sm mt-0.5">
+                          <FaCheckCircle />
+                        </div>
+                        <div className="flex-1 text-xs">
+                          <p className="font-bold text-slate-800">{n.title}</p>
+                          <p className="text-slate-600 mt-1 leading-relaxed">{n.message}</p>
+                          <p className="text-[10px] text-slate-400 mt-2">{n.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile */}
+          {isAuthenticated ? (
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setOpenProfile(!openProfile)}
+                className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/60 shadow-sm transition-all"
+              >
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                  {userInitial}
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-xs font-bold text-slate-800 truncate max-w-[110px]">{displayName}</p>
+                  <p className="text-[10px] text-teal-600 font-medium capitalize">{user?.role || "Kader"}</p>
+                </div>
+              </button>
+
+              {/* Profile Dropdown */}
+              {openProfile && (
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-slate-100 py-2 z-50 animate-fadeIn">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-800">{displayName}</p>
+                    <p className="text-[11px] text-slate-400 truncate">NIK: {user?.nik || '-'}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setOpenProfile(false);
+                      setOpenCalculator(true);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors font-medium sm:hidden"
+                  >
+                    <FaCalculator className="text-teal-600" />
+                    Kalkulator Z-Score
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors font-bold"
+                  >
+                    <FaSignOutAlt />
+                    Keluar (Logout)
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white text-xs font-bold shadow-md transition-all"
+            >
+              Masuk
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Quick Calculator Modal */}
+      <QuickCalculatorModal
+        isOpen={openCalculator}
+        onClose={() => setOpenCalculator(false)}
+      />
+    </>
   );
 };
 

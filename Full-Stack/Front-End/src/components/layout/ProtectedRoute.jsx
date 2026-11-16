@@ -1,9 +1,10 @@
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 const ProtectedRoute = ({ children }) => {
-  const isLogin = localStorage.getItem("sidias_login");
+  const { isAuthenticated } = useAuth();
 
-  if (!isLogin) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

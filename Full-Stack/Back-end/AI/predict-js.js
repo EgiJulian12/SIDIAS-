@@ -6,6 +6,8 @@
  * This is the gold standard for stunting detection used by WHO, UNICEF, and Kemenkes RI.
  */
 
+import { generatePersonalizedAdvice } from './personalizedAdvisor.js';
+
 // ======================================================================
 // WHO Height-for-Age Reference Data (0–60 months)
 // Format per month: [−3SD, −2SD, −1SD, Median, +1SD, +2SD, +3SD]  (cm)
@@ -203,32 +205,46 @@ export function predict(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan) {
   const refData = getRefData(table, umur_bulan);
   const zScore = calculateZScore(tinggi_badan, refData);
   const imt = berat_badan / ((tinggi_badan / 100) ** 2);
+  const parsedZ = parseFloat(zScore.toFixed(2));
+  const parsedImt = parseFloat(imt.toFixed(2));
 
-  // WHO classification thresholds
-  let status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail, rekomendasi, rekomendasi_detail;
+  // Generate personalized pediatric lifestyle, nutrition, sports, and sleep advice
+  const personalized = generatePersonalizedAdvice({
+    umur_bulan,
+    jenis_kelamin: sex,
+    tinggi_badan,
+    berat_badan,
+    zScore: parsedZ,
+    imt: parsedImt
+  });
+
+  // WHO classification thresholds & status
+  let status_stunting, status_detail, tingkat_risiko, tingkat_risiko_detail;
 
   if (zScore < -3) {
     status_stunting = 'Terindikasi Stunting';
     status_detail = 'Severely Stunted (Sangat Pendek)';
     tingkat_risiko = 'Tinggi';
-    tingkat_risiko_detail = `Z-Score HAZ: ${zScore.toFixed(2)} (< −3 SD). Anak mengalami stunting berat dan membutuhkan penanganan segera.`;
-    rekomendasi = 'Segera konsultasikan ke dokter spesialis anak atau puskesmas. Tingkatkan asupan protein hewani, susu, telur, ikan, dan makanan bergizi seimbang setiap hari.';
-    rekomendasi_detail = 'Lakukan kunjungan ke posyandu/puskesmas setiap bulan. Berikan makanan tinggi protein (telur, ikan, daging, susu). Pastikan anak mendapat vitamin A dan suplemen gizi. Periksakan kesehatan secara menyeluruh untuk mendeteksi penyakit penyerta.';
+    tingkat_risiko_detail = `Z-Score HAZ: ${parsedZ} (< −3 SD). ${personalized.scenario_title}.`;
   } else if (zScore < -2) {
     status_stunting = 'Terindikasi Stunting';
-    status_detail = 'Stunted (Pendek)';
+    status_detail = personalized.scenario === 'stunted_active_healthy' ? 'Stunted Aktif & Bugar' : 'Stunted (Pendek)';
+    tingkat_risiko = personalized.scenario === 'stunted_active_healthy' ? 'Sedang' : 'Tinggi';
+    tingkat_risiko_detail = `Z-Score HAZ: ${parsedZ} (−3 SD ≤ Z < −2 SD). ${personalized.scenario_title}.`;
+  } else if (zScore < -1.4) {
+    status_stunting = 'Tidak Stunting';
+    status_detail = 'Normal (Waspada Garis Kuning)';
     tingkat_risiko = 'Sedang';
-    tingkat_risiko_detail = `Z-Score HAZ: ${zScore.toFixed(2)} (−3 SD ≤ Z < −2 SD). Anak terindikasi stunting dan perlu pemantauan intensif.`;
-    rekomendasi = 'Tingkatkan konsumsi protein, susu, vitamin, makanan bergizi seimbang, dan lakukan pemeriksaan rutin ke posyandu.';
-    rekomendasi_detail = 'Berikan makanan pendamping ASI yang kaya gizi. Tingkatkan frekuensi makan dengan porsi kecil tapi sering. Pastikan imunisasi lengkap. Kontrol ke posyandu setiap bulan untuk pemantauan berat dan tinggi badan.';
+    tingkat_risiko_detail = `Z-Score HAZ: ${parsedZ}. Waspada risiko perlambatan pertumbuhan (Growth Faltering).`;
   } else {
     status_stunting = 'Tidak Stunting';
-    status_detail = 'Normal';
+    status_detail = 'Normal & Optimal';
     tingkat_risiko = 'Rendah';
-    tingkat_risiko_detail = `Z-Score HAZ: ${zScore.toFixed(2)} (≥ −2 SD). Pertumbuhan anak saat ini tergolong normal.`;
-    rekomendasi = 'Pertahankan pola makan sehat, aktivitas fisik, nutrisi seimbang, dan pemeriksaan rutin setiap bulan.';
-    rekomendasi_detail = 'Pertahankan pola asuh yang baik. Berikan makanan sehat dan seimbang setiap hari. Pastikan anak aktif bermain dan cukup istirahat. Lakukan pemeriksaan rutin di posyandu.';
+    tingkat_risiko_detail = `Z-Score HAZ: ${parsedZ} (≥ −2 SD). Pertumbuhan fisik anak saat ini dalam lintasan optimal.`;
   }
+
+  // Summary recommendation
+  const rekomendasiRingkas = `${personalized.proyeksi_masa_depan} Fokus Makanan: ${personalized.rekomendasi_makanan.fokus_utama} Olahraga: ${personalized.rekomendasi_olahraga.tujuan_stimulasi}`;
 
   return {
     status_stunting,
@@ -236,9 +252,10 @@ export function predict(umur_bulan, jenis_kelamin, tinggi_badan, berat_badan) {
     tingkat_risiko,
     tingkat_risiko_detail,
     indikator: 'WHO Height-for-Age (HAZ)',
-    indikator_detail: `Z-Score: ${zScore.toFixed(2)} | BMI: ${imt.toFixed(2)} | TB: ${tinggi_badan} cm | BB: ${berat_badan} kg | Umur: ${umur_bulan} bulan`,
-    z_score: parseFloat(zScore.toFixed(2)),
-    rekomendasi,
-    rekomendasi_detail,
+    indikator_detail: `Z-Score: ${parsedZ} | BMI: ${parsedImt} | TB: ${tinggi_badan} cm | BB: ${berat_badan} kg | Usia: ${umur_bulan} bulan`,
+    z_score: parsedZ,
+    rekomendasi: rekomendasiRingkas,
+    rekomendasi_detail: JSON.stringify(personalized),
+    personalized,
   };
 }
