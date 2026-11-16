@@ -3,6 +3,7 @@ import MainLayout from "../components/layout/MainLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { getLocalStats } from "../services/localDataService";
 import QuickCalculatorModal from "../components/common/QuickCalculatorModal";
 import {
   FaHeartbeat,
@@ -42,20 +43,12 @@ const Dashboard = () => {
         const res = await api.get("/dashboard/stats");
         if (res.data && res.data.data) {
           setStats(res.data.data);
+        } else {
+          setStats(getLocalStats());
         }
       } catch (err) {
-        console.warn("Gagal memuat statistik database riil, menggunakan fallback:", err.message);
-        // Fallback default demo data jika backend DB offline
-        setStats({
-          total_balita: 0,
-          total_pemeriksaan: 0,
-          normal_count: 0,
-          stunting_count: 0,
-          severe_stunting_count: 0,
-          normal_percentage: 100,
-          priority_children: [],
-          recent_activities: []
-        });
+        console.warn("Backend DB offline, menghitung analitik dari data lokal:", err.message);
+        setStats(getLocalStats());
       } finally {
         setIsLoading(false);
       }

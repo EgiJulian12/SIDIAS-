@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import Webcam from "react-webcam";
 import api from "../services/api";
+import { saveLocalExamination } from "../services/localDataService";
 import KmsGrowthChart from "../components/charts/KmsGrowthChart";
 import PrintReportModal from "../components/common/PrintReportModal";
 import {
@@ -167,9 +168,20 @@ const Diagnosis = () => {
       setAnalysisResult(fullData);
       toast.success("Analisis AI & Rekam Medis Berhasil Dibuat!");
     } catch (error) {
-      console.error(error);
-      const msg = error.response?.data?.message || "Gagal memproses pemeriksaan";
-      toast.error(msg);
+      console.warn("Backend API gagal/offline, beralih ke Mode Analisis Cerdas Lokal:", error);
+      // Fallback ke komputasi WHO dan penyimpanan lokal
+      const localResult = saveLocalExamination({
+        nama: data.nama,
+        jenis_kelamin: data.jenis_kelamin,
+        tanggal_lahir: data.tanggal_lahir,
+        umur_bulan: liveAgeMonths,
+        berat_badan: data.berat,
+        tinggi_badan: data.tinggi,
+        foto_url: preview,
+      });
+
+      setAnalysisResult(localResult);
+      toast.success("Analisis AI Berhasil Dihitung (Mode Lokal)!");
     } finally {
       setIsLoading(false);
       setLoadingStep("");

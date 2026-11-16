@@ -3,6 +3,7 @@ import MainLayout from "../components/layout/MainLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import api from "../services/api";
+import { getLocalExaminations, deleteLocalExamination } from "../services/localDataService";
 import KmsGrowthChart from "../components/charts/KmsGrowthChart";
 import PrintReportModal from "../components/common/PrintReportModal";
 import {
@@ -45,14 +46,20 @@ const History = () => {
 
   const fetchHistory = async () => {
     setIsLoading(true);
+    const localItems = getLocalExaminations();
     try {
       const response = await api.get("/analisis");
       if (response.data && response.data.data) {
-        setHistoryData(response.data.data);
+        // Merge API data with local items (avoid duplicate id)
+        const apiIds = new Set(response.data.data.map(i => i.id));
+        const nonDuplicateLocal = localItems.filter(i => !apiIds.has(i.id));
+        setHistoryData([...response.data.data, ...nonDuplicateLocal]);
+      } else {
+        setHistoryData(localItems);
       }
     } catch (error) {
-      console.error(error);
-      toast.error("Gagal memuat riwayat rekam medis");
+      console.warn("Backend API tidak dapat dijangkau, memuat data lokal:", error);
+      setHistoryData(localItems);
     } finally {
       setIsLoading(false);
     }
@@ -80,8 +87,10 @@ const History = () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      // Menghapus data_balita (cascade menghapus analisis)
-      await api.delete(`/data-balita/${deleteTarget.data_id || deleteTarget.id}`);
+      if (!String(deleteTarget.id).startsWith("local-") && !String(deleteTarget.id).startsWith("demo-")) {
+        await api.delete(`/data-balita/${deleteTarget.data_id || deleteTarget.id}`);
+      }
+      deleteLocalExamination(deleteTarget.id);
       toast.success("Rekam data berhasil dihapus");
       setHistoryData((prev) => prev.filter((item) => item.id !== deleteTarget.id));
       setDeleteTarget(null);
@@ -89,8 +98,10 @@ const History = () => {
         setSelectedItem(null);
       }
     } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Gagal menghapus data");
+      deleteLocalExamination(deleteTarget.id);
+      setHistoryData((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      toast.success("Rekam data dihapus dari penyimpanan");
     } finally {
       setIsDeleting(false);
     }
